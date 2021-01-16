@@ -1,0 +1,8 @@
+[package]
+name = "trackme"
+version = "0.1.0"
+authors = ["Tyler Boright <tyler@tylerboright.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "3.0.0-beta.2"
