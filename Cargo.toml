@@ -5,5 +5,7 @@ authors = ["Tyler Boright <tyler@tylerboright.com>"]
 edition = "2018"
 
 [dependencies]
+bincode = "1"
 clap = "3.0.0-beta.2"
 dirs = "3.0"
+serde = { version = "1.0", features = ["derive"]  }
