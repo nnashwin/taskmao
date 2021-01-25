@@ -1,11 +1,15 @@
 [package]
-name = "trackme"
+name = "taskmaster"
 version = "0.1.0"
 authors = ["Tyler Boright <tyler@tylerboright.com>"]
 edition = "2018"
 
 [dependencies]
-bincode = "1"
+chrono = "0.4"
 clap = "3.0.0-beta.2"
 dirs = "3.0"
 serde = { version = "1.0", features = ["derive"]  }
+
+[dependencies.rusqlite]
+git = "https://github.com/rusqlite/rusqlite"
+features = ["bundled"]

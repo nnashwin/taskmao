@@ -5,7 +5,7 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::io;
 
-pub type Result<T> = std::result::Result<T, TError>;
+pub type TResult<T> = Result<T, TError>;
 
 macro_rules! werr(
     ($($arg:tt)*) => ({
@@ -18,7 +18,6 @@ macro_rules! werr(
 pub enum ErrorKind {
     Io,
     Misc,
-    Task,
 }
 
 #[derive(Debug)]
@@ -48,7 +47,6 @@ impl fmt::Display for TError {
         match self.kind {
             ErrorKind::Io => write!(f, "{}", self.err),
             ErrorKind::Misc => write!(f, "{}", self.err),
-            ErrorKind::Task => write!(f, "{}", self.err),
         }
     }
 }
@@ -58,7 +56,6 @@ impl StdError for TError {
         match self.kind {
             ErrorKind::Io => "io error",
             ErrorKind::Misc => "misc error",
-            ErrorKind::Task => "task error",
         }
     }
 }
@@ -72,5 +69,11 @@ impl From<io::Error> for TError {
 impl From<clap::Error> for TError {
     fn from(err: clap::Error) -> TError {
         TError::new(ErrorKind::Misc, err)
+    }
+}
+
+impl From<rusqlite::Error> for TError {
+    fn from(err: rusqlite::Error) -> TError {
+        TError::new(ErrorKind::Io, err)
     }
 }
