@@ -8,21 +8,23 @@ mod terror;
 use chrono::prelude::*;
 use clap::clap_app;
 use rusqlite::{params, Connection, Result};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use terror::*;
 
 #[derive(Debug)]
 struct Entry {
-    end_time: DateTime<Local>,
+    end_time: String,
     name: String,
     project_name: String,
-    start_time: DateTime<Local>,
+    start_time: String,
 }
 
 #[derive(Debug)]
-struct Application {
-    running: bool,
+struct Setting {
+    key: String,
+    value: String,
 }
 
 fn parse_args() -> clap::ArgMatches {
@@ -37,7 +39,7 @@ fn parse_args() -> clap::ArgMatches {
     matches
 }
 
-fn set_up_sqlite(conn: &Connection) -> Result<Vec<String>> {
+fn set_up_sqlite(conn: &Connection) -> Result<Vec<Setting>, TError> {
     let create_sql = r"
         CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY, start_time TEXT, end_time TEXT, project_name TEXT, name TEXT);
         CREATE TABLE IF NOT EXISTS settings (key TEXT, value TEXT);
@@ -45,16 +47,21 @@ fn set_up_sqlite(conn: &Connection) -> Result<Vec<String>> {
 
     conn.execute_batch(create_sql)?;
 
-    let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?")?;
-    let rows = stmt.query_and_then(["running"], |row| row.get::<_, String>(0))?;
+    let mut stmt = conn.prepare("SELECT key, value FROM settings")?;
+    let rows = stmt.query_map([], |row| {
+        Ok(Setting {
+            key: row.get(0)?,
+            value: row.get(1)?,
+        })
+    })?;
 
-    let mut names = Vec::new();
+    let mut settings = Vec::new();
 
-    for name_result in rows {
-        names.push(name_result?);
+    for setting in rows {
+        settings.push(setting.unwrap());
     }
 
-    Ok(names)
+    Ok(settings)
 }
 
 fn run(args: clap::ArgMatches) -> TResult<()> {
@@ -75,9 +82,27 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
         Err(e) => panic!("The sqlite connection couldn't be opened with the following error: {}", e),
     };
 
-    let is_initial_setup: bool = match set_up_sqlite(&conn) {
-        Ok(strings) => strings.len() == 0,
-        Err(err) => true,
+    let settings = match set_up_sqlite(&conn) {
+        Ok(settings) => {
+            let mut map: HashMap<String, String> = HashMap::new();
+            for setting in settings.iter() {
+                map.insert(
+                    setting.key.clone(),
+                    setting.value.clone(),
+                );
+            }
+
+            map
+        },
+        Err(err) => {
+            println!("The settings for the application couldn't be parsed with the following error: {}", err);
+            HashMap::new()
+        },
+    };
+
+    let is_initial_setup: bool = match settings.len() {
+        0 => true,
+        _ => false,
     };
 
     if is_initial_setup {
@@ -95,19 +120,60 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
         None => "default".to_string(),
     };
 
+    // grab most recent entry from sqlite
+    let mut stmt = conn.prepare("SELECT name, project_name, start_time, end_time FROM entries WHERE id = (SELECT MAX(id) FROM entries)")?;
+    let entry_iter = stmt.query_map([], |row| {
+        Ok(Entry {
+            name: row.get(0)?,
+            project_name: row.get(1)?,
+            start_time: row.get(2)?,
+            end_time: row.get(3)?,
+        })
+    })?;
+
+    for entry in entry_iter {
+        println!("{:?}", entry.unwrap());
+    }
+
     if let Some(n) = args.value_of("NAME") {
+        let running = match settings.get("running") {
+            Some(val) => val,
+            _ => "false",
+        };
+
+        match running {
+            "true" => { 
+                println!("{}", "task is running") ;
+                conn.execute(
+                    "UPDATE settings SET value = 'false' WHERE key = 'running'",
+                    params![],
+                )?;
+            },
+            "false" => { 
+                println!("{}", "task is not running");
+                conn.execute(
+                    "UPDATE settings SET value = 'true' WHERE key = 'running'",
+                    params![],
+                )?;
+            },
+            _ => (),
+        }
+
+        println!("{}", running);
         let current_time = Local::now();
         let ent = Entry {
-            end_time: current_time,
+            end_time: current_time.to_rfc3339(),
             name: n.to_string(),
             project_name: project,
-            start_time: current_time,
+            start_time: current_time.to_rfc3339(),
         };
 
         conn.execute(
             "INSERT INTO entries (end_time, name, project_name, start_time) VALUES (?1, ?2, ?3, ?4)",
-            params![ent.end_time.to_rfc3339(), ent.name, ent.project_name, ent.start_time.to_rfc3339()],
+            params![ent.end_time, ent.name, ent.project_name, ent.start_time],
         )?;
+
+        
     }
 
     Ok(())
