@@ -18,6 +18,7 @@ macro_rules! werr(
 pub enum ErrorKind {
     Io,
     Misc,
+    Sql,
 }
 
 #[derive(Debug)]
@@ -47,6 +48,7 @@ impl fmt::Display for TError {
         match self.kind {
             ErrorKind::Io => write!(f, "{}", self.err),
             ErrorKind::Misc => write!(f, "{}", self.err),
+            ErrorKind::Sql => write!(f, "{}", self.err),
         }
     }
 }
@@ -56,6 +58,7 @@ impl StdError for TError {
         match self.kind {
             ErrorKind::Io => "io error",
             ErrorKind::Misc => "misc error",
+            ErrorKind::Sql => "sql error",
         }
     }
 }
@@ -74,6 +77,6 @@ impl From<clap::Error> for TError {
 
 impl From<rusqlite::Error> for TError {
     fn from(err: rusqlite::Error) -> TError {
-        TError::new(ErrorKind::Io, err)
+        TError::new(ErrorKind::Sql, err)
     }
 }
