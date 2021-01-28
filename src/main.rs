@@ -3,9 +3,11 @@ extern crate clap;
 extern crate dirs;
 extern crate rusqlite;
 
+mod data;
 mod terror;
 
 use chrono::prelude::*;
+use data::*;
 use clap::clap_app;
 use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
@@ -14,11 +16,11 @@ use std::path::PathBuf;
 use terror::*;
 
 #[derive(Debug)]
-struct Entry {
-    end_time: String,
-    name: String,
+struct Task {
+    end_time: DateTime<FixedOffset>,
+    description: String,
     project_name: String,
-    start_time: String,
+    start_time: DateTime<FixedOffset>,
 }
 
 #[derive(Debug)]
@@ -27,12 +29,26 @@ struct Setting {
     value: String,
 }
 
+fn get_most_recent_task(conn: &Connection, current_time: &String) -> Result<TaskDto, TError> {
+    let stmt = "SELECT description, project_name, start_time, end_time FROM tasks WHERE id = (SELECT MAX(id) FROM tasks)";
+    let task: TaskDto = conn.query_row(stmt, [], |r| {
+        Ok(TaskDto {
+            description: r.get(0)?,
+            project_name: r.get(1)?,
+            start_time: r.get(2)?,
+            end_time: current_time.clone(),
+        })
+    })?;
+
+    Ok(task)
+}
+
 fn parse_args() -> clap::ArgMatches {
     let matches = clap_app!(myapp =>
         (version: "1.0")
         (author: "Tyler B. <tyler@tylerboright.com>")
         (about: "The brain gains power through noticing.  Notice how you spend your time.")
-        (@arg NAME: +required "Sets the name of a task to execute")
+        (@arg DESC: +required "Sets the description of a task to execute")
         (@arg PROJECT: -p --project +takes_value "Sets the project of the task")
        ).get_matches();
 
@@ -41,7 +57,7 @@ fn parse_args() -> clap::ArgMatches {
 
 fn set_up_sqlite(conn: &Connection) -> Result<Vec<Setting>, TError> {
     let create_sql = r"
-        CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY, start_time TEXT, end_time TEXT, project_name TEXT, name TEXT);
+        CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, start_time TEXT, end_time TEXT, project_name TEXT, description TEXT);
         CREATE TABLE IF NOT EXISTS settings (key TEXT, value TEXT);
         ";
 
@@ -75,7 +91,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
     fs::create_dir_all(path.as_path())?;
 
-    path.push("entries.db3");
+    path.push("tasks.db3");
 
     let conn = match Connection::open(&path) {
         Ok(conn) => conn,
@@ -108,34 +124,16 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
     if is_initial_setup {
         conn.execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2)",
-            params!["running", "false"]
+            params!["running", "false"],
         )?;
     }
-
-    println!("local time {:?}", Local::now());
-    println!("local time {:?}", Utc::now());
 
     let project: String = match args.value_of("PROJECT") {
         Some(proj) => proj.to_string(),
         None => "default".to_string(),
     };
 
-    // grab most recent entry from sqlite
-    let mut stmt = conn.prepare("SELECT name, project_name, start_time, end_time FROM entries WHERE id = (SELECT MAX(id) FROM entries)")?;
-    let entry_iter = stmt.query_map([], |row| {
-        Ok(Entry {
-            name: row.get(0)?,
-            project_name: row.get(1)?,
-            start_time: row.get(2)?,
-            end_time: row.get(3)?,
-        })
-    })?;
-
-    for entry in entry_iter {
-        println!("{:?}", entry.unwrap());
-    }
-
-    if let Some(n) = args.value_of("NAME") {
+    if let Some(n) = args.value_of("DESC") {
         let running = match settings.get("running") {
             Some(val) => val,
             _ => "false",
@@ -143,14 +141,31 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
         match running {
             "true" => { 
-                println!("{}", "task is running") ;
-                conn.execute(
-                    "UPDATE settings SET value = 'false' WHERE key = 'running'",
-                    params![],
-                )?;
+                // grab most recent entry from sqlite
+                let current_time = Local::now().to_rfc3339();
+                let prev_task = get_most_recent_task(&conn, &current_time)?;
+                println!("{:?}", prev_task);
+
+                let new_task = TaskDto {
+                    end_time: current_time.clone(),
+                    description: n.to_string(),
+                    project_name: project,
+                    start_time: current_time.clone(),
+                };
+
+                prev_task.save_to_db(&conn)?;
+                new_task.save_to_db(&conn)?;
             },
             "false" => { 
-                println!("{}", "task is not running");
+                let current_time = Local::now().to_rfc3339();
+                let new_task = TaskDto {
+                    end_time: current_time.clone(),
+                    description: n.to_string(),
+                    project_name: project,
+                    start_time: current_time.clone(),
+                };
+                
+                new_task.save_to_db(&conn);
                 conn.execute(
                     "UPDATE settings SET value = 'true' WHERE key = 'running'",
                     params![],
@@ -158,22 +173,6 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
             },
             _ => (),
         }
-
-        println!("{}", running);
-        let current_time = Local::now();
-        let ent = Entry {
-            end_time: current_time.to_rfc3339(),
-            name: n.to_string(),
-            project_name: project,
-            start_time: current_time.to_rfc3339(),
-        };
-
-        conn.execute(
-            "INSERT INTO entries (end_time, name, project_name, start_time) VALUES (?1, ?2, ?3, ?4)",
-            params![ent.end_time, ent.name, ent.project_name, ent.start_time],
-        )?;
-
-        
     }
 
     Ok(())
