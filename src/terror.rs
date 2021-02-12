@@ -35,12 +35,12 @@ impl TError {
 
     pub fn new<E>(kind: ErrorKind, err: E) -> TError 
         where E: Into<Box<dyn StdError + Send + Sync>>
-    {
-        TError {
-            err: err.into(),
-            kind: kind,
-        }   
-    }
+        {
+            TError {
+                err: err.into(),
+                kind: kind,
+            }
+        }
 }
 
 impl fmt::Display for TError {
