@@ -1,5 +1,5 @@
 [package]
-name = "taskmaster"
+name = "taskmao"
 version = "0.1.0"
 authors = ["Tyler Boright <tyler@tylerboright.com>"]
 edition = "2018"
