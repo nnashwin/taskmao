@@ -80,3 +80,9 @@ impl From<rusqlite::Error> for TError {
         TError::new(ErrorKind::Sql, err)
     }
 }
+
+impl From<chrono::ParseError> for TError {
+    fn from(err: chrono::ParseError) -> TError {
+        TError::new(ErrorKind::Misc, err)
+    }
+}

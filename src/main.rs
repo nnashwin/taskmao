@@ -4,6 +4,7 @@ extern crate dirs;
 extern crate rusqlite;
 
 mod data;
+mod display;
 mod terror;
 
 use chrono::prelude::*;
@@ -100,7 +101,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
             if let Some(n) = args.value_of("DESC") {
                 // grab most recent entry from sqlite
-                let current_time = Local::now().to_rfc3339();
+                let current_time = Utc::now().to_rfc3339();
 
                 let new_task = TaskDto {
                     end_time: current_time.clone(),
@@ -127,13 +128,20 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                         prev_task.end_task(current_time);
                         prev_task.save_to_db(&conn)?;
                         new_task.save_to_db(&conn)?;
+
+                        let parsed_end_time = DateTime::parse_from_rfc3339(&prev_task.end_time)?;
+
+                        let converted_date_time = DateTime::<Local>::from(parsed_end_time);
+
+                        println!("stopped running '{}' at {}", prev_task.description, prev_task.end_time);
                     },
                     _ => {
+                        println!("{}", "false");
                         new_task.save_to_db(&conn)?;
                     },
                 }
 
-                println!("started running {} at {}", new_task.description, new_task.start_time);
+                println!("started running '{}' at {}", new_task.description, new_task.start_time);
             }
 
         },
