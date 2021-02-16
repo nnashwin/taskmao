@@ -15,30 +15,6 @@ use std::fs;
 use std::path::PathBuf;
 use terror::*;
 
-#[derive(Debug)]
-struct Task {
-    end_time: DateTime<FixedOffset>,
-    description: String,
-    project_name: String,
-    running: bool,
-    start_time: DateTime<FixedOffset>,
-}
-
-fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
-    let stmt = "SELECT description, project_name, running, end_time, start_time FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
-    let task: TaskDto = conn.query_row(stmt, [], |r| {
-        Ok(TaskDto {
-            description: r.get(0)?,
-            project_name: r.get(1)?,
-            running: r.get(2)?,
-            end_time: r.get(3)?,
-            start_time: r.get(4)?,
-        })
-    })?;
-
-    Ok(task)
-}
-
 fn parse_args() -> clap::ArgMatches {
     let matches = clap_app!(taskmao =>
         (version: "1.0")
@@ -47,7 +23,9 @@ fn parse_args() -> clap::ArgMatches {
         (@arg DESC: "Sets the description of a task to execute")
         (@arg PROJECT: -p --project +takes_value "Sets the project of the task")
         (@subcommand end =>
-            (about: "ends currently executing task")
+            (about: "ends currently executing task"))
+        (@subcommand info =>
+            (about: "returns info on the currently executing task or nothing at all")
        )).get_matches();
 
     matches
@@ -100,7 +78,17 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                     display::task_end(&prev_task.end_time, &prev_task.description)?;
                 },
                 Err(_err) => {
-                    display::custom_message("you currently have no tasks running")
+                    display::custom_message("you currently have no task running");
+                }
+            };
+        },
+        Some("info") => {
+            match get_most_recent_task(&conn) {
+                Ok(current_task) => { 
+                    display::task_info(&current_task.start_time, &current_task.description)?;
+                },
+                Err(_err) => {
+                    display::custom_message("taskmao: you currently have no task running");
                 }
             };
         },

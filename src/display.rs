@@ -18,6 +18,14 @@ pub fn task_end(task_end_timestamp: &str, task_desc: &str) -> Result<(), TError>
     Ok(())
 }
 
+pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TError> {
+    let time = convert_to_local_timestamp(task_start_timestamp)?;
+
+    println!("taskmao: currently running task '{}' that started at '{}'", task_desc, time);
+
+    Ok(())
+}
+
 pub fn task_start(task_start_timestamp: &str, task_desc: &str) -> Result<(), TError> {
     let time = convert_to_local_timestamp(task_start_timestamp)?;
 
