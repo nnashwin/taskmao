@@ -1,5 +1,6 @@
 extern crate rusqlite;
 
+use crate::TError;
 use rusqlite::{params, Connection, Result};
 
 #[derive(Debug)]
@@ -25,4 +26,25 @@ impl TaskDto {
 
         Ok(())
     }
+}
+
+pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
+    let stmt = "SELECT description, project_name, running, end_time, start_time FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
+    let task: TaskDto = conn.query_row(stmt, [], |r| {
+        Ok(TaskDto {
+            description: r.get(0)?,
+            project_name: r.get(1)?,
+            running: r.get(2)?,
+            end_time: r.get(3)?,
+            start_time: r.get(4)?,
+        })
+    })?;
+
+    Ok(task)
+}
+
+pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, TError> {
+    let stmt = "SELECT description, project_name, running, end_time, start_time FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
+
+    Ok(Vec::new())
 }
