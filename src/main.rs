@@ -25,7 +25,7 @@ struct Task {
 }
 
 fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
-    let stmt = "SELECT description, project_name, running, end_time, start_time FROM tasks WHERE id = (SELECT MAX(id) FROM tasks)";
+    let stmt = "SELECT description, project_name, running, end_time, start_time FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
     let task: TaskDto = conn.query_row(stmt, [], |r| {
         Ok(TaskDto {
             description: r.get(0)?,
@@ -91,7 +91,18 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
     match args.subcommand_name() {
         Some("end") => { 
-            println!("{}", "end task"); 
+            let current_time = Utc::now().to_rfc3339();
+
+            match get_most_recent_task(&conn) {
+                Ok(mut prev_task) => { 
+                    prev_task.end_task(current_time);
+                    prev_task.save_to_db(&conn)?;
+                    display::task_end(&prev_task.end_time, &prev_task.description)?;
+                },
+                Err(_err) => {
+                    display::custom_message("you currently have no tasks running")
+                }
+            };
         },
         None => {
             let project: String = match args.value_of("PROJECT") {
@@ -129,19 +140,14 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                         prev_task.save_to_db(&conn)?;
                         new_task.save_to_db(&conn)?;
 
-                        let parsed_end_time = DateTime::parse_from_rfc3339(&prev_task.end_time)?;
-
-                        let converted_date_time = DateTime::<Local>::from(parsed_end_time);
-
-                        println!("stopped running '{}' at {}", prev_task.description, prev_task.end_time);
+                        display::task_end(&prev_task.end_time, &prev_task.description)?;
                     },
                     _ => {
-                        println!("{}", "false");
                         new_task.save_to_db(&conn)?;
                     },
                 }
 
-                println!("started running '{}' at {}", new_task.description, new_task.start_time);
+                display::task_start(&new_task.start_time, &new_task.description)?;
             }
 
         },
