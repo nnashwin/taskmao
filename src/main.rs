@@ -15,6 +15,10 @@ use std::fs;
 use std::path::PathBuf;
 use terror::*;
 
+fn get_current_time_str() -> String {
+    Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
 fn parse_args() -> clap::ArgMatches {
     let matches = clap_app!(taskmao =>
         (version: "1.0")
@@ -25,20 +29,12 @@ fn parse_args() -> clap::ArgMatches {
         (@subcommand end =>
             (about: "ends currently executing task"))
         (@subcommand info =>
-            (about: "returns info on the currently executing task or nothing at all")
+            (about: "returns info on the currently executing task or nothing at all"))
+        (@subcommand list =>
+            (about: "lists tasks completed / worked on today")
        )).get_matches();
 
     matches
-}
-
-fn set_up_sqlite(conn: &Connection) -> Result<()> {
-    let create_sql = r"
-        CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, start_time TEXT, end_time TEXT, project_name TEXT, running TEXT, description TEXT);
-        ";
-
-    conn.execute_batch(create_sql)?;
-
-    Ok(())
 }
 
 fn run(args: clap::ArgMatches) -> TResult<()> {
@@ -69,11 +65,11 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
     match args.subcommand_name() {
         Some("end") => { 
-            let current_time = Utc::now().to_rfc3339();
+            let current_time = get_current_time_str();
 
             match get_most_recent_task(&conn) {
                 Ok(mut prev_task) => { 
-                    prev_task.end_task(current_time);
+                    prev_task.end_task(current_time.to_string());
                     prev_task.save_to_db(&conn)?;
                     display::task_end(&prev_task.end_time, &prev_task.description)?;
                 },
@@ -88,9 +84,20 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                     display::task_info(&current_task.start_time, &current_task.description)?;
                 },
                 Err(_err) => {
-                    display::custom_message("taskmao: you currently have no task running");
+                    display::custom_message("you currently have no task running");
                 }
             };
+        },
+        Some("list") => {
+            println!("{}", "list");
+            match get_todays_tasks(&conn) {
+                Ok(tasks) => {
+                    println!("{:?}", tasks);
+                },
+                Err(_err) => {
+                    display::custom_message("you currently have no tasks that have ran today");
+                }
+            }
         },
         None => {
             let project: String = match args.value_of("PROJECT") {
@@ -100,7 +107,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
             if let Some(n) = args.value_of("DESC") {
                 // grab most recent entry from sqlite
-                let current_time = Utc::now().to_rfc3339();
+                let current_time = get_current_time_str();
 
                 let new_task = TaskDto {
                     end_time: current_time.clone(),
@@ -139,7 +146,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
             }
 
         },
-        _ => println!("{}", "taskmao: try 'taskmao --help' for more information"),
+        _ => display::custom_message("try 'taskmao --help' for more information"),
     };
 
     Ok(())
