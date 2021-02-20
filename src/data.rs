@@ -22,10 +22,10 @@ impl TaskDto {
         conn.execute(
             "INSERT INTO tasks (end_time, description, project_name, running, start_time) VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT(start_time) DO UPDATE SET
-                end_time=end_time,
-                description=description,
-                project_name=project_name,
-                running=running;",
+                end_time=excluded.end_time,
+                description=excluded.description,
+                project_name=excluded.project_name,
+                running=excluded.running;",
             params![self.end_time, self.description, self.project_name, self.running, self.start_time],
         )?;
 
