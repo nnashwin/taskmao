@@ -42,9 +42,9 @@ pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
         let start_time = convert_to_local_timestamp(&task.start_time)?;
         let end_time = convert_to_local_timestamp(&task.end_time)?;
         if task.running == "true" {
-            println!("Currently running task: {}\n    Start Time: {}\n", task.description, start_time);
+            println!("Currently running task: {}\n    Project: {}\n    Start Time: {}\n", task.description, task.project_name, start_time);
         } else {
-            println!("Task: {}\n    Start Time: {}\n    End Time: {}", task.description, start_time, end_time);
+            println!("Task: {}\n    Project: {}\n    Start Time: {}\n    End Time: {}\n", task.description, task.project_name, start_time, end_time);
         }
     }
 
