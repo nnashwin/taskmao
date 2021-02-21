@@ -89,13 +89,20 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
             };
         },
         Some("list") => {
-            println!("{}", "list");
             match get_todays_tasks(&conn) {
                 Ok(tasks) => {
-                    println!("{:?}", tasks);
+                    let task_str = if tasks.len() > 1 { "tasks" } else { "task" };
+                    println!("You have completed {} {} in the previous day, {}\n", tasks.len(), task_str, display::todays_date());
+                    for task in &tasks {
+                        if task.running == "true" {
+                            println!("Currently running task: {}\n    Start Time: {}\n", task.description, task.start_time);
+                        } else {
+                            println!("Task: {}\n    Start Time: {}\n    End Time: {}", task.description, task.start_time, task.end_time);
+                        }
+                    }
                 },
                 Err(_err) => {
-                    display::custom_message("you currently have no tasks that have ran today");
+                    display::custom_message("you have no tasks from today");
                 }
             }
         },

@@ -1,7 +1,9 @@
 extern crate chrono;
 
 use chrono::prelude::*;
+use chrono::{Local};
 use crate::terror::*;
+
 
 fn convert_to_local_timestamp(utc_date_time: &str) -> Result<String, TError> {
     let parsed_end_time = NaiveDateTime::parse_from_str(utc_date_time, "%Y-%m-%d %H:%M:%S")?;
@@ -9,6 +11,11 @@ fn convert_to_local_timestamp(utc_date_time: &str) -> Result<String, TError> {
     let converted_date_time = DateTime::<Local>::from(end_dt);
 
     Ok(converted_date_time.format("%H:%M:%S").to_string())
+}
+
+pub fn todays_date() -> String {
+    let now_time = Local::now();
+    now_time.format("%Y-%m-%d").to_string()
 }
 
 pub fn task_end(task_end_timestamp: &str, task_desc: &str) -> Result<(), TError> {
