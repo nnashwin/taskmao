@@ -2,6 +2,7 @@ extern crate chrono;
 
 use chrono::prelude::*;
 use chrono::{Local};
+use crate::data::*;
 use crate::terror::*;
 
 
@@ -30,6 +31,22 @@ pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TErr
     let time = convert_to_local_timestamp(task_start_timestamp)?;
 
     println!("taskmao: currently running '{}' that started at '{}'", task_desc, time);
+
+    Ok(())
+}
+
+pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
+    let task_str = if tasks.len() > 1 { "tasks" } else { "task" };
+    println!("You have completed {} {} in the previous day, {}\n", tasks.len(), task_str, todays_date());
+    for task in &tasks {
+        let start_time = convert_to_local_timestamp(&task.start_time)?;
+        let end_time = convert_to_local_timestamp(&task.end_time)?;
+        if task.running == "true" {
+            println!("Currently running task: {}\n    Start Time: {}\n", task.description, start_time);
+        } else {
+            println!("Task: {}\n    Start Time: {}\n    End Time: {}", task.description, start_time, end_time);
+        }
+    }
 
     Ok(())
 }
