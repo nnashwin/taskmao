@@ -4,6 +4,7 @@ use std;
 use std::error::Error as StdError;
 use std::fmt;
 use std::io;
+use toml::de::Error as TomlError;
 
 pub type TResult<T> = Result<T, TError>;
 
@@ -84,5 +85,11 @@ impl From<rusqlite::Error> for TError {
 impl From<chrono::ParseError> for TError {
     fn from(err: chrono::ParseError) -> TError {
         TError::new(ErrorKind::Misc, err)
+    }
+}
+
+impl From<TomlError> for TError {
+    fn from(err: TomlError) -> TError {
+        TError::new(ErrorKind::Io, err)
     }
 }

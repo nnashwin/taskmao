@@ -76,3 +76,13 @@ pub fn set_up_sqlite(conn: &Connection) -> Result<()> {
 
     Ok(())
 }
+
+pub fn test_sqlite_file(conn: &Connection) -> Result<(), TError> {
+    let create_sql = r"
+        CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, start_time TEXT UNIQUE, end_time TEXT, project_name TEXT, running TEXT, description TEXT);
+        ";
+
+    conn.execute_batch(create_sql)?;
+
+    Ok(())
+}
