@@ -41,7 +41,7 @@ pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TErr
 
 pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
     let task_str = if tasks.len() == 1 { "task" } else { "tasks" };
-    println!("You have completed {} {} in the previous day, {}\n", tasks.len(), task_str, todays_date());
+    println!("You have completed {} {} in the previous day, {}", tasks.len(), task_str, todays_date());
     for task in &tasks {
         let start_time = convert_to_local_timestamp(&task.start_time)?;
         let end_time = convert_to_local_timestamp(&task.end_time)?;
