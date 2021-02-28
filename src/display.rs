@@ -5,7 +5,6 @@ use chrono::{Local};
 use crate::data::*;
 use crate::terror::*;
 
-
 fn convert_to_local_timestamp(utc_date_time: &str) -> Result<String, TError> {
     let parsed_end_time = NaiveDateTime::parse_from_str(utc_date_time, "%Y-%m-%d %H:%M:%S")?;
     let end_dt = DateTime::<Utc>::from_utc(parsed_end_time, Utc);
@@ -27,6 +26,11 @@ pub fn task_end(task_end_timestamp: &str, task_desc: &str) -> Result<(), TError>
     Ok(())
 }
 
+pub fn task_file_path(file_path: &str) -> Result<(), TError> {
+    println!("taskmao: current task file path located at '{}'", file_path);
+    Ok(())
+}
+
 pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TError> {
     let time = convert_to_local_timestamp(task_start_timestamp)?;
 
@@ -36,7 +40,7 @@ pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TErr
 }
 
 pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
-    let task_str = if tasks.len() > 1 { "tasks" } else { "task" };
+    let task_str = if tasks.len() == 1 { "task" } else { "tasks" };
     println!("You have completed {} {} in the previous day, {}\n", tasks.len(), task_str, todays_date());
     for task in &tasks {
         let start_time = convert_to_local_timestamp(&task.start_time)?;
