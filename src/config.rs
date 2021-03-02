@@ -10,7 +10,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn get_tasks_file(&self) -> &String {
+    pub fn get_tasks_file(&self) -> &str {
         &self.tasks_file
     }
 
@@ -49,6 +49,6 @@ pub fn save_config(conf: Config) -> Result<(), TError> {
         None => PathBuf::from(""),
     };
     path.push(".taskmao/settings.toml");
-    fs::write(path, toml_str);
+    fs::write(path, toml_str)?;
     Ok(())
 }

@@ -10,8 +10,9 @@ mod terror;
 
 use chrono::prelude::*;
 use config::*;
-use data::*;
 use clap::{clap_app};
+use data::*;
+use ::std::*;
 use rusqlite::{Connection, Result};
 use std::fs;
 use std::path::PathBuf;
@@ -19,6 +20,16 @@ use terror::*;
 
 fn get_current_time_str() -> String {
     Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
+fn get_user_input (message: &str) -> String {
+    println!("{}", message);
+    let mut ret = String::new();
+    io::stdin()
+        .read_line(&mut ret)
+        .expect("Failed to read the user's response");
+
+    ret.trim().to_string().to_lowercase()
 }
 
 fn parse_args() -> clap::ArgMatches {
@@ -65,28 +76,58 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
     match set_up_sqlite(&conn) {
         Ok(_val) => {},
         Err(err) => {
-            println!("The data store for tasks could not be set up with the following error: {}", err);
+            display::custom_message(&format!("The data store for tasks could not be set up with the following error: {}", err));
         },
     };
 
     match args.subcommand() {
         Some(("config", config_matches)) => {
-            println!("{}", "within config");
             match config_matches.value_of("CONF_PATH") {
                 Some(val) => { 
                     match Connection::open(val) {
                         Ok(test_conn) => {
                             match test_sqlite_file(&test_conn) {
                                 Ok(()) => {
-                                    config.set_tasks_file(val.to_string())?;
-                                    save_config(config)?;
+                                    let new_path = fs::canonicalize(val)?;
+                                    let path_str = new_path.to_str().expect("your config filepath was not valid,  please check to make sure the file exists and try again.");
+
+                                    if path_str != config.get_tasks_file() {
+                                        config.set_tasks_file(val.to_string())?;
+                                        save_config(config)?;
+
+                                        let most_recent_task = get_most_recent_task(&conn);
+
+                                        if most_recent_task.is_ok() {
+                                            let mut task = most_recent_task.unwrap();
+                                            let current_time = get_current_time_str();
+                                            match get_user_input(&format!("you currently are running the task: '{}'\nDo you want to add this task to you new config file? [Y\\N]", &task.description)).as_str() {
+                                                "y" => {
+                                                    task.save_to_db(&test_conn)?;
+                                                    display::task_start(&task.start_time, &task.description)?;
+
+                                                    task.end_task(current_time);
+                                                    task.save_to_db(&conn)?;
+                                                },
+                                                "n" => {
+                                                    task.end_task(current_time);
+                                                    task.save_to_db(&conn)?;
+                                                    display::custom_message("you have chosen to not save your task in the new database.  your task is closed in the old database and config is changed");
+                                                },
+                                                _ => panic!("invalid response to add task question, not changing config."),
+                                            }
+                                        }
+
+                                        display::custom_message(&format!("now using database: {}", path_str));
+                                    } else {
+                                        display::custom_message("the entered config value matches the config location,  config remains unchanged.");
+                                    }
                                 },
                                 Err(_err) => {
                                     display::custom_message("the new config file path has an issue and can't be set.  Add a valid file path and try again");
                                 },
                             };
                         },
-                        Err(err) => println!("{}", err),
+                        Err(err) => display::custom_message(&format!("connection with new database file could not be opened.  failed with the following error: {}", err)),
                     };
                 },
                 None => { 

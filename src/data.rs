@@ -18,7 +18,7 @@ impl TaskDto {
         self.end_time = current_time;
     }
 
-    pub fn save_to_db (&self, conn: &Connection) -> Result<()> {
+    pub fn save_to_db (&self, conn: &Connection) -> Result<(), TError> {
         conn.execute(
             "INSERT INTO tasks (end_time, description, project_name, running, start_time) VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT(start_time) DO UPDATE SET
