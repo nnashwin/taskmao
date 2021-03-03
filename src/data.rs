@@ -10,6 +10,7 @@ pub struct TaskDto {
     pub project_name: String,
     pub running: String,
     pub start_time: String,
+    pub unique_id: String,
 }
 
 impl TaskDto {
@@ -20,13 +21,14 @@ impl TaskDto {
 
     pub fn save_to_db (&self, conn: &Connection) -> Result<(), TError> {
         conn.execute(
-            "INSERT INTO tasks (end_time, description, project_name, running, start_time) VALUES (?1, ?2, ?3, ?4, ?5)
+            "INSERT INTO tasks (end_time, description, project_name, running, start_time, unique_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
              ON CONFLICT(start_time) DO UPDATE SET
                 end_time=excluded.end_time,
                 description=excluded.description,
                 project_name=excluded.project_name,
-                running=excluded.running;",
-            params![self.end_time, self.description, self.project_name, self.running, self.start_time],
+                running=excluded.running,
+                unique_id=excluded.unique_id;",
+            params![self.end_time, self.description, self.project_name, self.running, self.start_time, self.unique_id],
         )?;
 
         Ok(())
@@ -34,7 +36,7 @@ impl TaskDto {
 }
 
 pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
-    let stmt = "SELECT description, project_name, running, end_time, start_time FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
+    let stmt = "SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
     let task: TaskDto = conn.query_row(stmt, [], |r| {
         Ok(TaskDto {
             description: r.get(0)?,
@@ -42,6 +44,7 @@ pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
             running: r.get(2)?,
             end_time: r.get(3)?,
             start_time: r.get(4)?,
+            unique_id: r.get(5)?,
         })
     })?;
 
@@ -49,7 +52,7 @@ pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
 }
 
 pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, TError> {
-    let mut stmt = conn.prepare("SELECT description, project_name, running, end_time, start_time FROM tasks WHERE tasks.end_time >= DATETIME('now', '-24 hour')")?;
+    let mut stmt = conn.prepare("SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE tasks.end_time >= DATETIME('now', '-24 hour')")?;
     let mut rows = stmt.query([])?;
 
     let mut tasks = Vec::new();
@@ -61,6 +64,7 @@ pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, TError> {
             running: r.get(2)?,
             end_time: r.get(3)?,
             start_time: r.get(4)?,
+            unique_id: r.get(5)?,
         });
     }
 
@@ -69,7 +73,7 @@ pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, TError> {
 
 pub fn set_up_sqlite(conn: &Connection) -> Result<()> {
     let create_sql = r"
-        CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, start_time TEXT UNIQUE, end_time TEXT, project_name TEXT, running TEXT, description TEXT);
+        CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, start_time TEXT UNIQUE, end_time TEXT, project_name TEXT, running TEXT, description TEXT, unique_id TEXT UNIQUE);
         ";
 
     conn.execute_batch(create_sql)?;
@@ -79,7 +83,7 @@ pub fn set_up_sqlite(conn: &Connection) -> Result<()> {
 
 pub fn test_sqlite_file(conn: &Connection) -> Result<(), TError> {
     let create_sql = r"
-        CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, start_time TEXT UNIQUE, end_time TEXT, project_name TEXT, running TEXT, description TEXT);
+        CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, start_time TEXT UNIQUE, end_time TEXT, project_name TEXT, running TEXT, description TEXT, unique_id TEXT UNIQUE);
         ";
 
     conn.execute_batch(create_sql)?;
