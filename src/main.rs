@@ -8,6 +8,7 @@ mod config;
 mod data;
 mod display;
 mod terror;
+mod time;
 
 use chrono::prelude::*;
 use config::*;
@@ -17,6 +18,7 @@ use rusqlite::{Connection, Result};
 use std::fs;
 use std::path::PathBuf;
 use terror::*;
+use time::{convert_to_local_timestamp};
 use uuid::Uuid;
 
 
@@ -30,6 +32,7 @@ fn parse_args() -> clap::ArgMatches {
         (author: "Tyler B. <tyler@tylerboright.com>")
         (about: "Gain power through noticing.  Notice how you spend your time.")
         (@arg PROJECT: -p --project +takes_value "")
+        (@arg START_TIME: -s --start +takes_value "")
         (@arg DESC: "Sets the description of a task to execute")
         (@subcommand config =>
             (about: "Sets the path of the config file")
@@ -139,6 +142,18 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                 Some(proj) => proj.to_string(),
                 None => "default".to_string(),
             };
+
+            // convert from local datetime to utc string here
+            // need to convert start time input to local datetime, then local datetime to utc
+            // string
+            let start_time: String = match args.value_of("START_TIME") {
+                Some(start_time) => start_time.to_string(),
+                None => get_current_time_str(),
+            };
+
+            let utc_converted_start_time: String = time::convert_to_utc_timestamp(&start_time)?;
+
+            println!("{}", utc_converted_start_time);
 
             match args.value_of("DESC") {
                 Some(desc) => {
