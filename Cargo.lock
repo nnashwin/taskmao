@@ -501,6 +501,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "lazy_static",
  "regex",
  "rusqlite",
  "serde",
