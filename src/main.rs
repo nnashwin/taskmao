@@ -1,16 +1,16 @@
 extern crate chrono;
 extern crate clap;
 extern crate dirs;
+#[macro_use] extern crate lazy_static;
+extern crate regex;
 extern crate rusqlite;
 extern crate uuid;
-
 mod config;
 mod data;
 mod display;
 mod terror;
 mod time;
 
-use chrono::prelude::*;
 use config::*;
 use data::*;
 use clap::{clap_app};
@@ -18,7 +18,7 @@ use rusqlite::{Connection, Result};
 use std::{fs, io};
 use std::path::PathBuf;
 use terror::*;
-use time::{convert_to_local_timestamp, get_current_time_str};
+use time::{convert_to_utc_timestamp, get_current_utc_string};
 use uuid::Uuid;
 
 fn get_user_input (message: &str) -> String {
@@ -97,7 +97,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
                                 if most_recent_task.is_ok() {
                                     let mut task = most_recent_task.unwrap();
-                                    let current_time = get_current_time_str();
+                                    let current_time = get_current_utc_string();
                                     match get_user_input(&format!("you currently are running the task: '{}'\nDo you want to add this task to you new config file? [Y\\N]", &task.description)).as_str() {
                                         "y" => {
                                             task.save_to_db(&test_conn)?;
@@ -125,13 +125,15 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                 },
                 None => { 
                     let absolute_path = path.join(&config.get_tasks_file());
-                    let file_path_str = absolute_path.to_str();
-                    display::task_file_path(file_path_str.unwrap_or(config.get_tasks_file()));
+                    let file_path_str = absolute_path
+                        .to_str()
+                        .unwrap_or(config.get_tasks_file());
+                    display::task_file_path(file_path_str)?;
                 },
             };
         },
         Some(("end", _)) => { 
-            let current_time = get_current_time_str();
+            let current_time = get_current_utc_string();
 
             match get_most_recent_task(&conn) {
                 Ok(mut prev_task) => { 
@@ -139,8 +141,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                     prev_task.save_to_db(&conn)?;
                     display::task_end(&prev_task.end_time, &prev_task.description)?;
                 },
-                Err(err) => {
-                    println!("{:?}", err);
+                Err(_err) => {
                     display::custom_message("you currently have no task running");
                 }
             };
@@ -175,46 +176,41 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
             // need to convert start time input to local datetime, then local datetime to utc
             // string
             let start_time: String = match args.value_of("START_TIME") {
-                Some(start_time) => start_time.to_string(),
-                None => get_current_time_str(),
+                Some(start_time) => {
+                    convert_to_utc_timestamp(start_time)?
+                },
+                None => get_current_utc_string(),
             };
-
-            let utc_converted_start_time: String = time::convert_to_utc_timestamp(&start_time)?;
-
-            println!("{}", utc_converted_start_time);
+            println!("current_utc_string: {}", get_current_utc_string());
 
             match args.value_of("DESC") {
                 Some(desc) => {
                     // grab most recent entry from sqlite
-                    let current_time = get_current_time_str();
-
                     let new_task = TaskDto {
-                        end_time: current_time.clone(),
+                        end_time: start_time.clone(),
                         description: desc.to_string(),
                         project_name: project.clone(),
                         running: "true".to_string(),
-                        start_time: current_time.clone(),
+                        start_time: start_time.clone(),
                         unique_id: Uuid::new_v4().to_string(),
                     };
-
-                    println!("{:?}", new_task);
 
                     let mut prev_task = match get_most_recent_task(&conn) {
                         Ok(task) => task,
                         Err(_err) => {
                             TaskDto {
-                                end_time: current_time.clone(),
+                                end_time: start_time.clone(),
                                 description: desc.to_string(),
                                 project_name: project,
                                 running: "false".to_string(),
-                                start_time: current_time.clone(),
+                                start_time: start_time.clone(),
                                 unique_id: Uuid::new_v4().to_string(),
                             }
                         }
                     };
                     match &prev_task.running[..] {
                         "true" => { 
-                            prev_task.end_task(current_time);
+                            prev_task.end_task(start_time);
                             prev_task.save_to_db(&conn)?;
                             new_task.save_to_db(&conn)?;
 

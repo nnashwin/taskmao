@@ -5,21 +5,27 @@ use crate::terror::*;
 use regex::Regex;
 use std::io::{Error, ErrorKind};
 
-use std::cmp;
+static LENGTH_OF_FULL_TIMESTAMP: usize = 8;
 
-pub fn convert_to_local_timestamp(utc_date_time: &str) -> Result<String, TError> {
+pub fn convert_to_local_timestamp(utc_date_time: &str, should_display_date: bool) -> Result<String, TError> {
     let parsed_end_time = NaiveDateTime::parse_from_str(utc_date_time, "%Y-%m-%d %H:%M:%S")?;
     let end_dt = DateTime::<Utc>::from_utc(parsed_end_time, Utc);
     let converted_date_time = DateTime::<Local>::from(end_dt);
+    let date_format = match should_display_date {
+        true => "%Y-%m-%d %H:%M:%S",
+        false => "%H:%M:%S",
+    };
 
-    Ok(converted_date_time.format("%H:%M:%S").to_string())
+    Ok(converted_date_time.format(date_format).to_string())
 }
 
 pub fn convert_to_utc_timestamp(local_date_time: &str) -> Result<String, TError> {
-    match is_valid_timestr(local_date_time) {
+    let modified_ldt = if local_date_time.len() < LENGTH_OF_FULL_TIMESTAMP { local_date_time.to_owned() + ":00" } else { local_date_time.to_string() };
+
+    match is_valid_timestr(&modified_ldt) {
         true => {
             let now_str = Local::now().format("%H:%M:%S").to_string();
-            let date_to_add = if is_time_yesterday(&now_str, &local_date_time) {
+            let date_to_add = if is_time_yesterday(&now_str, &modified_ldt) {
 
                 let dt = Local::now() - Duration::days(1);
                 dt.format("%Y-%m-%d ").to_string()
@@ -27,7 +33,7 @@ pub fn convert_to_utc_timestamp(local_date_time: &str) -> Result<String, TError>
                 Local::now().format("%Y-%m-%d ").to_string()
             };
 
-            let concat_str: String = (date_to_add + local_date_time);
+            let concat_str: String = date_to_add + &modified_ldt;
             let parsed_local_time = NaiveDateTime::parse_from_str(&concat_str, "%Y-%m-%d %H:%M:%S")?;
 
             let start_dt = Local::from_local_datetime(&Local, &parsed_local_time);
@@ -70,7 +76,7 @@ fn is_time_yesterday(now_time: &str, compared_time: &str) -> bool {
     false
 }
 
-pub fn get_current_time_str() -> String {
+pub fn get_current_utc_string() -> String {
     Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
@@ -100,6 +106,13 @@ mod tests {
     }
 
     #[test]
+    fn test_convert_local_to_utc_no_seconds() {
+        let timest = "15:44";
+        let utc_time_with_padd = "05:44:00";
+        assert_eq!(convert_to_utc_timestamp(&timest).unwrap().contains(utc_time_with_padd), true);
+    }
+
+    #[test]
     fn test_convert_invalid_local_to_utc_fails() {
         let timest = "100:10:10";
         assert_eq!(convert_to_utc_timestamp(&timest).is_err(), true);
@@ -108,19 +121,19 @@ mod tests {
     #[test]
     fn test_display_local_timestamp() {
         let timest = FixedOffset::east(0).ymd(1983, 4, 13).and_hms_milli(12, 9, 14, 274).format("%Y-%m-%d %H:%M:%S").to_string();
-        assert_eq!(convert_to_local_timestamp(&timest).unwrap(), "22:09:14");
+        assert_eq!(convert_to_local_timestamp(&timest, false).unwrap(), "22:09:14");
     }
 
     #[test]
     fn test_display_local_timestamp_error_hit() {
         let timest = "arestneasrtn";
-        assert_eq!(convert_to_local_timestamp(&timest).is_err(), true);
+        assert_eq!(convert_to_local_timestamp(&timest, false).is_err(), true);
     }
 
     #[test]
     fn test_display_local_timestamp_error_incorrect_format() {
         let timest = "009:009:009";
-        assert_eq!(convert_to_local_timestamp(&timest).is_err(), true);
+        assert_eq!(convert_to_local_timestamp(&timest, false).is_err(), true);
     }
 
     #[test]

@@ -1,12 +1,11 @@
 extern crate chrono;
 
-use chrono::prelude::*;
 use crate::data::*;
 use crate::terror::*;
-use crate::time::{convert_to_local_timestamp, convert_to_utc_timestamp, get_todays_date};
+use crate::time::{convert_to_local_timestamp, get_todays_date};
 
 pub fn task_end(task_end_timestamp: &str, task_desc: &str) -> Result<(), TError> {
-    let time = convert_to_local_timestamp(task_end_timestamp)?;
+    let time = convert_to_local_timestamp(task_end_timestamp, false)?;
 
     println!("taskmao: stopped running '{}' at {}", task_desc, time);
 
@@ -19,7 +18,7 @@ pub fn task_file_path(file_path: &str) -> Result<(), TError> {
 }
 
 pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TError> {
-    let time = convert_to_local_timestamp(task_start_timestamp)?;
+    let time = convert_to_local_timestamp(task_start_timestamp, true)?;
 
     println!("taskmao: currently running '{}' that started at '{}'", task_desc, time);
 
@@ -30,8 +29,8 @@ pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
     let task_str = if tasks.len() == 1 { "task" } else { "tasks" };
     println!("You have completed {} {} in the previous day, {}", tasks.len(), task_str, get_todays_date());
     for task in &tasks {
-        let start_time = convert_to_local_timestamp(&task.start_time)?;
-        let end_time = convert_to_local_timestamp(&task.end_time)?;
+        let start_time = convert_to_local_timestamp(&task.start_time, true)?;
+        let end_time = convert_to_local_timestamp(&task.end_time, true)?;
         if task.running == "true" {
             println!("Currently running task: {}\n    Project: {}\n    Start Time: {}\n    Task Id: {}\n", task.description, task.project_name, start_time, task.unique_id);
         } else {
@@ -43,7 +42,7 @@ pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
 }
 
 pub fn task_start(task_start_timestamp: &str, task_desc: &str) -> Result<(), TError> {
-    let time = convert_to_local_timestamp(task_start_timestamp)?;
+    let time = convert_to_local_timestamp(task_start_timestamp, false)?;
 
     println!("taskmao: started running task '{}' at {}", task_desc, time);
 
