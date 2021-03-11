@@ -76,7 +76,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
     match set_up_sqlite(&conn) {
         Ok(_val) => {},
         Err(err) => {
-            display::custom_message(&format!("The data store for tasks could not be set up with the following error: {}", err));
+            display::custom_message(&format!("The data store for tasks could not be set up with the following error: {}", err), &mut io::stdout())?;
         },
     };
 
@@ -101,7 +101,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                                     match get_user_input(&format!("you currently are running the task: '{}'\nDo you want to add this task to you new config file? [Y\\N]", &task.description)).as_str() {
                                         "y" => {
                                             task.save_to_db(&test_conn)?;
-                                            display::task_start(&task.start_time, &task.description)?;
+                                            display::task_start(&task.start_time, &task.description, &mut io::stdout())?;
 
                                             task.end_task(current_time);
                                             task.save_to_db(&conn)?;
@@ -109,18 +109,18 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                                         "n" => {
                                             task.end_task(current_time);
                                             task.save_to_db(&conn)?;
-                                            display::custom_message("you have chosen to not save your task in the new database.  your task is closed in the old database and config is changed");
+                                            display::custom_message("you have chosen to not save your task in the new database.  your task is closed in the old database and config is changed", &mut io::stdout())?;
                                         },
                                         _ => panic!("invalid response to add task question, not changing config."),
                                     }
                                 }
 
-                                display::custom_message(&format!("now using database: {}", path_str));
+                                display::custom_message(&format!("now using database: {}", path_str), &mut io::stdout())?;
                             } else {
-                                display::custom_message("the entered config value matches the config location,  config remains unchanged.");
+                                display::custom_message("the entered config value matches the config location,  config remains unchanged.", &mut io::stdout())?;
                             }
                         },
-                        Err(err) => display::custom_message(&format!("connection with new database file could not be opened. failed with the following error: {}", err)),
+                        Err(err) => display::custom_message(&format!("connection with new database file could not be opened. failed with the following error: {}", err), &mut io::stdout())?,
                     };
                 },
                 None => { 
@@ -142,7 +142,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                     display::task_end(&prev_task.end_time, &prev_task.description)?;
                 },
                 Err(_err) => {
-                    display::custom_message("you currently have no task running");
+                    display::custom_message("you currently have no task running", &mut io::stdout())?;
                 }
             };
         },
@@ -152,7 +152,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                     display::task_info(&current_task.start_time, &current_task.description)?;
                 },
                 Err(_err) => {
-                    display::custom_message("you currently have no task running");
+                    display::custom_message("you currently have no task running", &mut io::stdout())?;
                 }
             };
         },
@@ -162,7 +162,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                    display::task_list(tasks)?;
                 },
                 Err(_err) => {
-                    display::custom_message("you have no tasks from today");
+                    display::custom_message("you have no tasks from today", &mut io::stdout())?;
                 }
             }
         },
@@ -181,7 +181,6 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                 },
                 None => get_current_utc_string(),
             };
-            println!("current_utc_string: {}", get_current_utc_string());
 
             match args.value_of("DESC") {
                 Some(desc) => {
@@ -221,12 +220,12 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                         },
                     }
 
-                    display::task_start(&new_task.start_time, &new_task.description)?;
+                    display::task_start(&new_task.start_time, &new_task.description, &mut io::stdout())?;
                 },
-                None => display::custom_message("a description wasn't entered for your task.  For more help, try '--help'")
+                None => display::custom_message("a description wasn't entered for your task.  For more help, try '--help'", &mut io::stdout())?
             }
         },
-        _ => display::custom_message("try 'taskmao --help' for more information"),
+        _ => display::custom_message("try 'taskmao --help' for more information", &mut io::stdout())?,
     };
 
     Ok(())

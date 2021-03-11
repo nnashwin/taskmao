@@ -41,14 +41,38 @@ pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
     Ok(())
 }
 
-pub fn task_start(task_start_timestamp: &str, task_desc: &str) -> Result<(), TError> {
+pub fn task_start(task_start_timestamp: &str, task_desc: &str, mut writer: impl std::io::Write) -> Result<(), TError> {
     let time = convert_to_local_timestamp(task_start_timestamp, false)?;
 
-    println!("taskmao: started running task '{}' at {}", task_desc, time);
+    writeln!(writer, "taskmao: started running task '{}' at {}", task_desc, time)?;
 
     Ok(())
 }
 
-pub fn custom_message(message_to_display: &str) {
-    println!("taskmao: {}", message_to_display);
+pub fn custom_message(message_to_display: &str, mut writer: impl std::io::Write) -> Result<(), TError> {
+    writeln!(writer, "taskmao: {}", message_to_display)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_custom_message_printout() -> Result<(), TError> {
+        let mut result = Vec::new();
+        let input = "this is my custom message";
+        custom_message(input, &mut result)?;
+        assert_eq!(result, b"taskmao: this is my custom message\n");
+        Ok(())
+    }
+
+    #[test]
+    fn test_task_start_errors_when_time_is_invalid() {
+        let result = Vec::new();
+        let input = "101010101010:10:10";
+        let desc = "this is a test task";
+        let res = task_start(input, desc, result);
+        assert_eq!(res.is_err(), true);
+    }
 }
