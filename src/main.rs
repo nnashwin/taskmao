@@ -37,13 +37,14 @@ fn parse_args() -> clap::ArgMatches {
         (author: "Tyler B. <tyler@tylerboright.com>")
         (about: "Gain power through noticing.  Notice how you spend your time.")
         (@arg PROJECT: -p --project +takes_value "")
-        (@arg START_TIME: -s --start +takes_value "")
+        (@arg START_TIME: -t --time +takes_value "")
         (@arg DESC: "Sets the description of a task to execute")
         (@subcommand config =>
             (about: "Sets the path of the config file")
             (@arg CONF_PATH: -s --set +takes_value "Sets the path of the config file"))
         (@subcommand end =>
-            (about: "ends currently executing task"))
+            (about: "ends currently executing task")
+            (@arg END_TIME: -t --time +takes_value ""))
         (@subcommand info =>
             (about: "returns info on the currently executing task or nothing at all"))
         (@subcommand list =>
@@ -132,12 +133,17 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                 },
             };
         },
-        Some(("end", _)) => { 
-            let current_time = get_current_utc_string();
+        Some(("end", end)) => {
+            let end_time: String = match end.value_of("END_TIME") {
+                Some(end_time) => {
+                    convert_to_utc_timestamp(end_time)?
+                },
+                None => get_current_utc_string(),
+            };
 
             match get_most_recent_task(&conn) {
                 Ok(mut prev_task) => { 
-                    prev_task.end_task(current_time.to_string());
+                    prev_task.end_task(end_time.to_string());
                     prev_task.save_to_db(&conn)?;
                     display::task_end(&prev_task.end_time, &prev_task.description)?;
                 },
