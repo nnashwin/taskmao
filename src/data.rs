@@ -14,9 +14,9 @@ pub struct TaskDto {
 }
 
 impl TaskDto {
-    pub fn end_task(&mut self, current_time: String) {
+    pub fn end_task(&mut self, end_time: String) {
         self.running = "false".to_string();
-        self.end_time = current_time;
+        self.end_time = end_time;
     }
 
     pub fn save_to_db (&self, conn: &Connection) -> Result<(), TError> {
