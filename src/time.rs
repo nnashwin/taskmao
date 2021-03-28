@@ -19,6 +19,32 @@ pub fn convert_to_local_timestamp(utc_date_time: &str, should_display_date: bool
     Ok(converted_date_time.format(date_format).to_string())
 }
 
+pub fn convert_to_utc_time(local_date_time: &str) -> Result<DateTime<Utc>, TError> {
+    let modified_ldt = if local_date_time.len() < LENGTH_OF_FULL_TIMESTAMP { local_date_time.to_owned() + ":00" } else { local_date_time.to_string() };
+    match is_valid_timestr(&modified_ldt) {
+        true => {
+            let now_str = Local::now().format("%H:%M:%S").to_string();
+            let date_to_add = if is_time_yesterday(&now_str, &modified_ldt) {
+                let dt = Local::now() - Duration::days(1);
+                dt.format("%Y-%m-%d ").to_string()
+            } else {
+                Local::now().format("%Y-%m-%d ").to_string()
+            };
+
+            let concat_str: String = date_to_add + &modified_ldt;
+            let parsed_local_time = NaiveDateTime::parse_from_str(&concat_str, "%Y-%m-%d %H:%M:%S")?;
+
+            let start_dt = Local::from_local_datetime(&Local, &parsed_local_time);
+            let converted_date_time = DateTime::<Utc>::from(start_dt.unwrap());
+
+            Ok(converted_date_time)
+        },
+        false => {
+            return Err(TError::from(Error::new(ErrorKind::Other, "time specified is an illegal timestamp, timestamp should be of the format HH:MM:SS")))
+        }
+    }
+}
+
 pub fn convert_to_utc_timestamp(local_date_time: &str) -> Result<String, TError> {
     let modified_ldt = if local_date_time.len() < LENGTH_OF_FULL_TIMESTAMP { local_date_time.to_owned() + ":00" } else { local_date_time.to_string() };
 
@@ -26,7 +52,6 @@ pub fn convert_to_utc_timestamp(local_date_time: &str) -> Result<String, TError>
         true => {
             let now_str = Local::now().format("%H:%M:%S").to_string();
             let date_to_add = if is_time_yesterday(&now_str, &modified_ldt) {
-
                 let dt = Local::now() - Duration::days(1);
                 dt.format("%Y-%m-%d ").to_string()
             } else {
@@ -45,7 +70,6 @@ pub fn convert_to_utc_timestamp(local_date_time: &str) -> Result<String, TError>
             return Err(TError::from(Error::new(ErrorKind::Other, "time specified is an illegal timestamp, timestamp should be of the format HH:MM:SS")))
         }
     }
-    
 }
 
 fn is_time_yesterday(now_time: &str, compared_time: &str) -> bool {
@@ -83,6 +107,15 @@ pub fn get_current_utc_string() -> String {
 pub fn get_todays_date() -> String {
     let now_time = Local::now();
     now_time.format("%Y-%m-%d").to_string()
+}
+
+pub fn get_time_between_stamps(begin_stamp: &str, end_stamp: &str) -> Result<Duration, TError> {
+    println!("{}", begin_stamp);
+    println!("{}", end_stamp);
+
+    let beg_date_time = convert_to_utc_time(begin_stamp)?;
+    let end_date_time = convert_to_utc_time(end_stamp)?;
+    return Ok(end_date_time - beg_date_time)
 }
 
 fn is_valid_timestr(time_str: &str) -> bool {
@@ -161,5 +194,32 @@ mod tests {
         for str in &invalid_strs {
             assert_eq!(is_valid_timestr(str), false);
         }
+    }
+
+    #[test]
+    fn test_time_since_start() {
+        let begin_time = "23:36:24";
+        let end_time = "23:36:59";
+        let prev_time = Utc.ymd(2021, 03, 18).and_hms(23, 36, 24);
+        let future_time = Utc.ymd(2021, 03, 18).and_hms(23, 36, 59);
+        assert_eq!(get_time_between_stamps(begin_time, end_time).unwrap(), future_time - prev_time);
+    }
+
+    #[test]
+    fn test_time_since_start_minutes() {
+        let begin_time = "23:36:24";
+        let end_time = "23:38:59";
+        let prev_time = Utc.ymd(2021, 03, 18).and_hms(23, 36, 24);
+        let future_time = Utc.ymd(2021, 03, 18).and_hms(23, 38, 59);
+        assert_eq!(get_time_between_stamps(begin_time, end_time).unwrap(), future_time - prev_time);
+    }
+
+    #[test]
+    fn test_time_since_start_hours() {
+        let begin_time = "23:36:24";
+        let end_time = "01:38:59";
+        let prev_time = Utc.ymd(2021, 03, 18).and_hms(23, 36, 24);
+        let future_time = Utc.ymd(2021, 03, 19).and_hms(01, 38, 59);
+        assert_eq!(get_time_between_stamps(begin_time, end_time).unwrap(), future_time - prev_time);
     }
 }
