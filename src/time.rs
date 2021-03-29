@@ -72,6 +72,21 @@ pub fn convert_to_utc_timestamp(local_date_time: &str) -> Result<String, TError>
     }
 }
 
+pub fn get_current_utc_string() -> String {
+    Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
+pub fn get_time_between_stamps(begin_stamp: &str, end_stamp: &str) -> Result<Duration, TError> {
+    let beg_date_time = convert_to_utc_time(begin_stamp)?;
+    let end_date_time = convert_to_utc_time(end_stamp)?;
+    return Ok(end_date_time - beg_date_time)
+}
+
+pub fn get_todays_date() -> String {
+    let now_time = Local::now();
+    now_time.format("%Y-%m-%d").to_string()
+}
+
 fn is_time_yesterday(now_time: &str, compared_time: &str) -> bool {
     let mut now_split: Vec<&str> = now_time.split(':').collect(); 
     let mut compared_split: Vec<&str> = compared_time.split(':').collect();
@@ -100,31 +115,13 @@ fn is_time_yesterday(now_time: &str, compared_time: &str) -> bool {
     false
 }
 
-pub fn get_current_utc_string() -> String {
-    Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
-}
-
-pub fn get_todays_date() -> String {
-    let now_time = Local::now();
-    now_time.format("%Y-%m-%d").to_string()
-}
-
-pub fn get_time_between_stamps(begin_stamp: &str, end_stamp: &str) -> Result<Duration, TError> {
-    println!("{}", begin_stamp);
-    println!("{}", end_stamp);
-
-    let beg_date_time = convert_to_utc_time(begin_stamp)?;
-    let end_date_time = convert_to_utc_time(end_stamp)?;
-    return Ok(end_date_time - beg_date_time)
-}
-
 fn is_valid_timestr(time_str: &str) -> bool {
     lazy_static! {
         // matches all valid inputs on a 24hr clock
-        static ref RE: Regex = Regex::new(r"^\b(0[1-9]|1[0-9]|2[0-3])\b:[0-5][0-9](:[0-5][0-9])?$").unwrap();
+        static ref RE: Regex = Regex::new(r"^(?:(?:([01]?\d|2[0-3]):)([0-5]?\d):)([0-5]\d)$").unwrap();
     }
 
-    RE.is_match(time_str)
+    RE.is_match(time_str) && time_str.len() == LENGTH_OF_FULL_TIMESTAMP
 }
 
 #[cfg(test)]
@@ -148,6 +145,12 @@ mod tests {
     #[test]
     fn test_convert_invalid_local_to_utc_fails() {
         let timest = "100:10:10";
+        assert_eq!(convert_to_utc_timestamp(&timest).is_err(), true);
+    }
+
+    #[test]
+    fn test_convert_truncated_local_to_utc_fails() {
+        let timest = "10";
         assert_eq!(convert_to_utc_timestamp(&timest).is_err(), true);
     }
 
@@ -184,8 +187,8 @@ mod tests {
 
     #[test]
     fn test_is_valid_timestr() {
-        let valid_strs = vec!["01:01", "12:12", "23:59", "23:59:40"];
-        let invalid_strs = vec!["22:80:00", "21:21:80", "111:12:12"];
+        let valid_strs = vec!["01:01:00", "12:12:59", "23:59:28", "23:59:40"];
+        let invalid_strs = vec!["22:80:00", "21:21:80", "111:12:12", "10:10", "09:09", "09"];
 
         for str in &valid_strs {
             assert_eq!(is_valid_timestr(str), true);
