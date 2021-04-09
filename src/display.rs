@@ -2,7 +2,7 @@ extern crate chrono;
 
 use crate::data::*;
 use crate::terror::*;
-use crate::time::{convert_to_local_timestamp, get_todays_date};
+use crate::time::{convert_to_local_timestamp, get_time_between_stamps, get_todays_date};
 
 pub fn task_end(task_end_timestamp: &str, task_desc: &str) -> Result<(), TError> {
     let time = convert_to_local_timestamp(task_end_timestamp, false)?;
@@ -32,6 +32,9 @@ pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
     for task in &tasks {
         let start_time = convert_to_local_timestamp(&task.start_time, true)?;
         let end_time = convert_to_local_timestamp(&task.end_time, true)?;
+        let duration = get_time_between_stamps(&start_time, &end_time);
+        println!("duration: {}", duration);
+        
         if task.running == "true" {
             println!("Currently running task: {}\n    Project: {}\n    Start Time: {}\n    Task Id: {}\n", task.description, task.project_name, start_time, task.unique_id);
         } else {
