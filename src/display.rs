@@ -28,17 +28,20 @@ pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TErr
 pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), TError> {
     let task_str = if tasks.len() == 1 { "task" } else { "tasks" };
 
-    println!("You have completed {} {} on the previous day, {}", tasks.len(), task_str, get_todays_date());
+    println!("\nYou have completed {} {} on the previous day, {}", tasks.len(), task_str, get_todays_date());
     for task in &tasks {
         let start_time = convert_to_local_timestamp(&task.start_time, true)?;
         let end_time = convert_to_local_timestamp(&task.end_time, true)?;
-        let duration = get_time_between_stamps(&start_time, &end_time);
-        println!("duration: {}", duration);
+        let duration = get_time_between_stamps(&start_time, &end_time)?;
+        let seconds = if duration.num_seconds() < 60 { duration.num_seconds() } else { duration.num_seconds() % 60 };
+        let minutes = if duration.num_minutes() < 60 { duration.num_minutes() } else { duration.num_minutes() % 60 };
+        let hours = if duration.num_hours() < 24 { duration.num_hours() } else { duration.num_hours() % 24 };
         
         if task.running == "true" {
-            println!("Currently running task: {}\n    Project: {}\n    Start Time: {}\n    Task Id: {}\n", task.description, task.project_name, start_time, task.unique_id);
+            println!("Current Task: {}\n    Project: {}\n    Start Time: {}\n    Task Id: {}\n", task.description, task.project_name, start_time, task.unique_id);
         } else {
-            println!("Task: {}\n    Project: {}\n    Start Time: {}\n    End Time: {}\n    Task Id: {}\n", task.description, task.project_name, start_time, end_time, task.unique_id);
+            let dur_str = format!("{} days, {} hours, {} minutes and {} seconds", duration.num_days(), hours, minutes, seconds);
+            println!("Task: {}\n    Project: {}\n    Start Time: {}\n    End Time: {}\n    Duration: {}\n    Task Id: {}\n", task.description, task.project_name, start_time, end_time, dur_str, task.unique_id);
         }
     }
 

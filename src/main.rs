@@ -18,7 +18,7 @@ use rusqlite::{Connection, Result};
 use std::{fs, io};
 use std::path::PathBuf;
 use terror::*;
-use time::{convert_to_utc_timestamp, get_current_utc_string};
+use time::{convert_to_utc_timestr, get_current_utc_string};
 use uuid::Uuid;
 
 fn get_user_input (message: &str) -> String {
@@ -136,7 +136,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
         Some(("end", end)) => {
             let end_time: String = match end.value_of("END_TIME") {
                 Some(end_time) => {
-                    convert_to_utc_timestamp(end_time)?
+                    convert_to_utc_timestr(end_time)?
                 },
                 None => get_current_utc_string(),
             };
@@ -183,7 +183,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
             // string
             let start_time: String = match args.value_of("START_TIME") {
                 Some(start_time) => {
-                    convert_to_utc_timestamp(start_time)?
+                    convert_to_utc_timestr(start_time)?
                 },
                 None => get_current_utc_string(),
             };
