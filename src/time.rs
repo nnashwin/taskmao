@@ -202,11 +202,4 @@ mod tests {
         let actual = get_time_between_stamps(begin_time, end_time);
         assert_eq!(actual.unwrap(), future_time - prev_time);
     }
-
-    #[test]
-    fn convert_to_utc_datetime_errs_correctly() {
-        let begin_time = "23:36:24";
-        let dt = convert_to_utc_datetime(begin_time);
-        assert_eq!(dt.is_err(), true);
-    }
 }
