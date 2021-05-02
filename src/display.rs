@@ -17,10 +17,10 @@ pub fn task_file_path(file_path: &str) -> Result<(), TError> {
     Ok(())
 }
 
-pub fn task_info(task_start_timestamp: &str, task_desc: &str) -> Result<(), TError> {
-    let time = convert_to_local_timestamp(task_start_timestamp, true)?;
+pub fn task_info(task: TaskDto, mut writer: impl std::io::Write) -> Result<(), TError> {
+    let time = convert_to_local_timestamp(&task.start_time, true)?;
 
-    println!("taskmao: currently running '{}' that started at '{}'", task_desc, time);
+    writeln!(writer, "taskmao: currently running '{}' that started at '{}'", task.description, time)?;
 
     Ok(())
 }

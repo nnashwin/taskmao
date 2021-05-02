@@ -155,7 +155,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
         Some(("info", _)) => {
             match get_most_recent_task(&conn) {
                 Ok(current_task) => { 
-                    display::task_info(&current_task.start_time, &current_task.description)?;
+                    display::task_info(current_task, &mut io::stdout())?;
                 },
                 Err(_err) => {
                     display::custom_message("you currently have no task running", &mut io::stdout())?;
