@@ -33,7 +33,7 @@ fn get_user_input (message: &str) -> String {
 
 fn parse_args() -> clap::ArgMatches {
     let matches = clap_app!(taskmao =>
-        (version: "1.0")
+        (version: "0.1.0")
         (author: "Tyler B. <tyler@tylerboright.com>")
         (about: "Gain power through noticing.  Notice how you spend your time.")
         (@arg PROJECT: -p --project +takes_value "")
