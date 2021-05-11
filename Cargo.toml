@@ -15,5 +15,5 @@ toml = "0.5"
 uuid = { version = "0.4", features = ["v4"] }
 
 [dependencies.rusqlite]
-git = "https://github.com/rusqlite/rusqlite"
+version = "0.25.1"
 features = ["bundled"]
