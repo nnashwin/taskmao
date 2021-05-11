@@ -46,6 +46,10 @@ pub fn convert_to_utc_timestr(local_date_time: &str) -> Result<String, TError> {
     }
 }
 
+pub fn get_local_datetime() -> String {
+    Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
 pub fn get_current_utc_string() -> String {
     Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }

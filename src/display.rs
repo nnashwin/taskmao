@@ -2,7 +2,20 @@ extern crate chrono;
 
 use crate::data::*;
 use crate::terror::*;
-use crate::time::{convert_to_local_timestamp, get_time_between_stamps, get_todays_date};
+use crate::time::{convert_to_local_timestamp, get_local_datetime, get_time_between_stamps, get_todays_date};
+
+pub fn create_duration_str(duration: chrono::Duration) -> String {
+    let seconds = if duration.num_seconds() < 60 { duration.num_seconds() } else { duration.num_seconds() % 60 };
+    let minutes = if duration.num_minutes() < 60 { duration.num_minutes() } else { duration.num_minutes() % 60 };
+    let hours = if duration.num_hours() < 24 { duration.num_hours() } else { duration.num_hours() % 24 };
+
+    format!("{} days, {} hours, {} minutes and {} seconds", duration.num_days(), hours, minutes, seconds)
+}
+
+pub fn custom_message(message_to_display: &str, mut writer: impl std::io::Write) -> Result<(), TError> {
+    writeln!(writer, "taskmao: {}", message_to_display)?;
+    Ok(())
+}
 
 pub fn task_end(task_end_timestamp: &str, task_desc: &str) -> Result<(), TError> {
     let time = convert_to_local_timestamp(task_end_timestamp, false)?;
@@ -20,7 +33,8 @@ pub fn task_file_path(file_path: &str) -> Result<(), TError> {
 pub fn task_info(task: TaskDto, mut writer: impl std::io::Write) -> Result<(), TError> {
     let time = convert_to_local_timestamp(&task.start_time, true)?;
 
-    writeln!(writer, "taskmao: currently running '{}' that started at '{}'", task.description, time)?;
+    let duration = get_time_between_stamps(&time, &get_local_datetime())?;
+    writeln!(writer, "taskmao: currently running '{}' that started at '{}'\n    Duration: {}", task.description, time, create_duration_str(duration))?;
 
     Ok(())
 }
@@ -56,10 +70,6 @@ pub fn task_start(task_start_timestamp: &str, task_desc: &str, mut writer: impl 
     Ok(())
 }
 
-pub fn custom_message(message_to_display: &str, mut writer: impl std::io::Write) -> Result<(), TError> {
-    writeln!(writer, "taskmao: {}", message_to_display)?;
-    Ok(())
-}
 
 #[cfg(test)]
 mod tests {
@@ -81,5 +91,17 @@ mod tests {
         let desc = "this is a test task";
         let res = task_start(input, desc, result);
         assert_eq!(res.is_err(), true);
+    }
+    #[test]
+    fn test_create_duration_str() {
+        let secs_duration = Duration::seconds(59);
+        let mins_duration = Duration::seconds(159);
+        let hours_duration = Duration::seconds(3790);
+        let days_duration = Duration::seconds(87000);
+
+        assert_eq!(create_duration_str(secs_duration), format!("{} days, {} hours, {} minutes and {} seconds", 0, 0, 0, 59));
+        assert_eq!(create_duration_str(mins_duration), format!("{} days, {} hours, {} minutes and {} seconds", 0, 0, 2, 39));
+        assert_eq!(create_duration_str(hours_duration), format!("{} days, {} hours, {} minutes and {} seconds", 0, 1, 3, 10));
+        assert_eq!(create_duration_str(days_duration), format!("{} days, {} hours, {} minutes and {} seconds", 1, 0, 10, 0));
     }
 }
