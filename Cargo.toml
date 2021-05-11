@@ -2,7 +2,8 @@
 name = "taskmao"
 description = "Gain power through noticing. Notice how you spend your time"
 license = "MIT"
-version = "0.1.0"
+readme = "readme.md"
+version = "0.1.1"
 authors = ["Tyler Boright <tyler@tylerboright.com>"]
 edition = "2018"
 
