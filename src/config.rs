@@ -23,7 +23,7 @@ impl Config {
 }
 
 impl Default for Config {
-    fn default() -> Config { 
+    fn default() -> Config {
         Config {
             tasks_file: ".taskmao/tasks.db3".to_string(),
         }

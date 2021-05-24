@@ -24,24 +24,25 @@ pub enum ErrorKind {
 
 #[derive(Debug)]
 pub struct TError {
-    kind: ErrorKind, 
+    kind: ErrorKind,
     err: Box<dyn StdError + Send + Sync>,
 }
 
 impl TError {
-    pub fn exit (&self) {
+    pub fn exit(&self) {
         werr!("{}\n", self);
         std::process::exit(1);
     }
 
-    pub fn new<E>(kind: ErrorKind, err: E) -> TError 
-        where E: Into<Box<dyn StdError + Send + Sync>>
-        {
-            TError {
-                err: err.into(),
-                kind: kind,
-            }
+    pub fn new<E>(kind: ErrorKind, err: E) -> TError
+    where
+        E: Into<Box<dyn StdError + Send + Sync>>,
+    {
+        TError {
+            err: err.into(),
+            kind,
         }
+    }
 }
 
 impl fmt::Display for TError {
