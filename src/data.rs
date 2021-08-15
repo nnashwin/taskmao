@@ -51,6 +51,25 @@ pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
     Ok(task)
 }
 
+pub fn get_tasks_start_with(conn: &Connection, id: &str) -> Result<Vec<TaskDto>, TError> {
+    let mut stmt = conn.prepare(&("SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE tasks.unique_id LIKE '%".to_owned() + id +"%'"))?;
+    let mut rows = stmt.query([])?;
+
+    let mut tasks = Vec::new();
+    while let Some(r) = rows.next()? {
+        tasks.push(TaskDto {
+            description: r.get(0)?,
+            project_name: r.get(1)?,
+            running: r.get(2)?,
+            end_time: r.get(3)?,
+            start_time: r.get(4)?,
+            unique_id: r.get(5)?,
+        });
+    }
+
+    Ok(tasks)
+}
+
 pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, TError> {
     let mut stmt = conn.prepare("SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE tasks.end_time >= DATETIME('now', '-24 hour')")?;
     let mut rows = stmt.query([])?;
