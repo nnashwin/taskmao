@@ -48,8 +48,14 @@ pub fn task_end(task_end_timestamp: &str, task_desc: &str) -> Result<(), TError>
     Ok(())
 }
 
-pub fn task_file_path(file_path: &str) -> Result<(), TError> {
-    println!("taskmao: current task file path located at '{}'", file_path);
+pub fn task_find(tasks: Vec<TaskDto>, task_id: &str, mut writer: impl std::io::Write) -> Result<(), TError> {
+    if tasks.len() < 1 {
+        writeln!(
+            writer,
+            "taskmao: there were no tasks found with the string '{}' in their id\nlook up another id and try again",
+            task_id
+        )?;
+    } 
     Ok(())
 }
 
@@ -178,5 +184,14 @@ mod tests {
             create_duration_str(days_duration),
             format!("{} days, {} hours, {} minutes and {} seconds", 1, 0, 10, 0)
         );
+    }
+    #[test]
+    fn test_unfound_task() {
+        let mut result = Vec::new();
+        let tasks = <Vec<TaskDto>>::new();
+        let input = "2394890naerisntenuylunetanrsten";
+        let _res = task_find(tasks, input, &mut result);
+        let str_output = String::from_utf8(result).unwrap();
+        assert_eq!(str_output, "taskmao: there were no tasks found with the string '2394890naerisntenuylunetanrsten' in their id\nlook up another id and try again\n")
     }
 }

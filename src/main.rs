@@ -22,16 +22,6 @@ use terror::*;
 use time::{convert_to_utc_timestr, get_current_utc_string};
 use uuid::Uuid;
 
-fn get_user_input(message: &str) -> String {
-    println!("{}", message);
-    let mut ret = String::new();
-    io::stdin()
-        .read_line(&mut ret)
-        .expect("Failed to read the user's response");
-
-    ret.trim().to_string().to_lowercase()
-}
-
 fn parse_args() -> clap::ArgMatches {
     let matches = clap_app!(taskmao =>
      (version: "0.1.0")
@@ -40,12 +30,12 @@ fn parse_args() -> clap::ArgMatches {
      (@arg PROJECT: -p --project +takes_value "")
      (@arg START_TIME: -t --time +takes_value "")
      (@arg DESC: "Sets the description of a task to execute")
-     (@subcommand config =>
-         (about: "Sets the path of the config file")
-         (@arg CONF_PATH: -s --set +takes_value "Sets the path of the config file"))
      (@subcommand end =>
          (about: "ends currently executing task")
          (@arg END_TIME: -t --time +takes_value ""))
+     (@subcommand find =>
+        (about: "finds a previously executed task by id")
+        (@arg ID: -i --id +takes_value ""))
      (@subcommand info =>
          (about: "returns info on the currently executing task or nothing at all"))
      (@subcommand list =>
@@ -58,13 +48,13 @@ fn parse_args() -> clap::ArgMatches {
 
 fn run(args: clap::ArgMatches) -> TResult<()> {
     let mut path: PathBuf = match dirs::home_dir() {
-        Some(path) => PathBuf::from(path),
+        Some(path) => path,
         None => PathBuf::from(""),
     };
 
     path.push(".taskmao");
 
-    let mut config = read_config(path.join("settings.toml"))?;
+    let config = read_config(path.join("settings.toml"))?;
 
     // create regardless in order to ensure that the dir exists
     fs::create_dir_all(path.as_path())?;
@@ -93,55 +83,6 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
     };
 
     match args.subcommand() {
-        Some(("config", config_matches)) => {
-            match config_matches.value_of("CONF_PATH") {
-                Some(val) => {
-                    match Connection::open(val) {
-                        Ok(test_conn) => {
-                            let new_path = fs::canonicalize(val)?;
-                            let path_str = new_path.to_str().expect("your config filepath was not valid,  please check to make sure the file exists and try again.");
-
-                            if path_str != config.get_tasks_file() {
-                                config.set_tasks_file(val.to_string())?;
-                                save_config(config)?;
-
-                                let most_recent_task = get_most_recent_task(&conn);
-
-                                if most_recent_task.is_ok() {
-                                    let mut task = most_recent_task.unwrap();
-                                    let current_time = get_current_utc_string();
-                                    match get_user_input(&format!("you currently are running the task: '{}'\nDo you want to add this task to you new config file? [Y\\N]", &task.description)).as_str() {
-                                        "y" => {
-                                            task.save_to_db(&test_conn)?;
-                                            display::task_start(&task.start_time, &task.description, &mut io::stdout())?;
-
-                                            task.end_task(current_time);
-                                            task.save_to_db(&conn)?;
-                                        },
-                                        "n" => {
-                                            task.end_task(current_time);
-                                            task.save_to_db(&conn)?;
-                                            display::custom_message("you have chosen to not save your task in the new database.  your task is closed in the old database and config is changed", &mut io::stdout())?;
-                                        },
-                                        _ => panic!("invalid response to add task question, not changing config."),
-                                    }
-                                }
-
-                                display::custom_message(&format!("now using database: {}", path_str), &mut io::stdout())?;
-                            } else {
-                                display::custom_message("the entered config value matches the config location,  config remains unchanged.", &mut io::stdout())?;
-                            }
-                        },
-                        Err(err) => display::custom_message(&format!("connection with new database file could not be opened. failed with the following error: {}", err), &mut io::stdout())?,
-                    };
-                }
-                None => {
-                    let absolute_path = path.join(&config.get_tasks_file());
-                    let file_path_str = absolute_path.to_str().unwrap_or(config.get_tasks_file());
-                    display::task_file_path(file_path_str)?;
-                }
-            };
-        }
         Some(("end", end)) => {
             let end_time: String = match end.value_of("END_TIME") {
                 Some(end_time) => convert_to_utc_timestr(end_time)?,
@@ -162,19 +103,30 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
                 }
             };
         }
-        Some(("info", _)) => {
-            match get_most_recent_task(&conn) {
-                Ok(current_task) => {
-                    display::task_info(current_task, &mut io::stdout())?;
-                }
-                Err(_err) => {
-                    display::custom_message(
-                        "you currently have no task running",
-                        &mut io::stdout(),
-                    )?;
+        Some(("find", search_id)) => {
+            let id = search_id.value_of("ID")
+                .ok_or(TError::new(ErrorKind::Io, "A search id was not entered for the find command.  Enter a valid search id and try again."))?;
+
+            match get_tasks_start_with(&conn, id) {
+                Ok(tasks) => { 
+                    display::task_find(tasks, id, &mut io::stdout())?;
+                },
+                Err(_err) => { 
+                    display::custom_message(&(format!("no tasks were found for the id: {}", id)), &mut io::stdout())?;
                 }
             };
         }
+        Some(("info", _)) => match get_most_recent_task(&conn) {
+            Ok(current_task) => {
+                display::task_info(current_task, &mut io::stdout())?;
+            }
+            Err(_err) => {
+                display::custom_message(
+                    "you currently have no task running",
+                    &mut io::stdout(),
+                )?;
+            }
+        },
         Some(("list", _)) => match get_todays_tasks(&conn) {
             Ok(tasks) => {
                 display::task_list(tasks)?;
@@ -184,11 +136,7 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
             }
         },
         None => {
-            let project: String = match args.value_of("PROJECT") {
-                Some(proj) => proj.to_string(),
-                None => "default".to_string(),
-            };
-
+            let project = args.value_of("PROJECT").unwrap_or("default").to_string();
             // convert from local datetime to utc string here
             // need to convert start time input to local datetime, then local datetime to utc
             // string
