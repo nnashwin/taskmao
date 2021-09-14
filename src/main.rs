@@ -6,14 +6,12 @@ extern crate lazy_static;
 extern crate regex;
 extern crate rusqlite;
 extern crate uuid;
-mod config;
 mod data;
 mod display;
 mod terror;
 mod time;
 
 use clap::clap_app;
-use config::*;
 use data::*;
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
@@ -52,16 +50,13 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
         None => PathBuf::from(""),
     };
 
-    path.push(".taskmao");
-
-    let config = read_config(path.join("settings.toml"))?;
+    path.push(".config");
+    path.push("taskmao");
 
     // create regardless in order to ensure that the dir exists
     fs::create_dir_all(path.as_path())?;
 
-    path.pop();
-
-    let conn = match Connection::open(path.join(&config.get_tasks_file())) {
+    let conn = match Connection::open(path.join("base.sql3")) {
         Ok(conn) => conn,
         Err(e) => panic!(
             "The sqlite connection couldn't be opened with the following error: {}",
