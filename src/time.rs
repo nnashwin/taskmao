@@ -1,16 +1,15 @@
 extern crate chrono;
-use crate::terror::*;
+use anyhow::anyhow;
 use chrono::prelude::*;
 use chrono::Duration;
 use regex::Regex;
-use std::io::{Error, ErrorKind};
 
 static LENGTH_OF_FULL_TIMESTAMP: usize = 8;
 
 pub fn convert_to_local_timestamp(
     utc_date_time: &str,
     should_display_date: bool,
-) -> Result<String, TError> {
+) -> Result<String, anyhow::Error> {
     let parsed_end_time = NaiveDateTime::parse_from_str(utc_date_time, "%Y-%m-%d %H:%M:%S")?;
     let end_dt = DateTime::<Utc>::from_utc(parsed_end_time, Utc);
     let converted_date_time = DateTime::<Local>::from(end_dt);
@@ -22,7 +21,7 @@ pub fn convert_to_local_timestamp(
     Ok(converted_date_time.format(date_format).to_string())
 }
 
-pub fn convert_to_utc_timestr(local_date_time: &str) -> Result<String, TError> {
+pub fn convert_to_utc_timestr(local_date_time: &str) -> Result<String, anyhow::Error> {
     let modified_ldt = if local_date_time.len() < LENGTH_OF_FULL_TIMESTAMP {
         local_date_time.to_owned() + ":00"
     } else {
@@ -48,10 +47,7 @@ pub fn convert_to_utc_timestr(local_date_time: &str) -> Result<String, TError> {
 
             Ok(converted_date_time.format("%Y-%m-%d %H:%M:%S").to_string())
         }
-        false => return Err(TError::from(Error::new(
-            ErrorKind::Other,
-            "time specified is an illegal timestamp, timestamp should be of the format HH:MM:SS",
-        ))),
+        false => return Err(anyhow!("time specified is an illegal timestamp, timestamp should be of the format HH:MM:SS")),
     }
 }
 
@@ -63,7 +59,7 @@ pub fn get_current_utc_string() -> String {
     Utc::now().format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
-pub fn get_time_between_stamps(begin_stamp: &str, end_stamp: &str) -> Result<Duration, TError> {
+pub fn get_time_between_stamps(begin_stamp: &str, end_stamp: &str) -> Result<Duration, anyhow::Error> {
     let beg_date_time = NaiveDateTime::parse_from_str(begin_stamp, "%Y-%m-%d %H:%M:%S")?;
     let end_date_time = NaiveDateTime::parse_from_str(end_stamp, "%Y-%m-%d %H:%M:%S")?;
     return Ok(end_date_time - beg_date_time);

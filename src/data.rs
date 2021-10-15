@@ -1,6 +1,6 @@
 extern crate rusqlite;
 
-use crate::TError;
+use anyhow::Error;
 use rusqlite::{params, Connection, Result};
 
 #[derive(Debug)]
@@ -19,7 +19,7 @@ impl TaskDto {
         self.end_time = end_time;
     }
 
-    pub fn save_to_db(&self, conn: &Connection) -> Result<(), TError> {
+    pub fn save_to_db(&self, conn: &Connection) -> Result<(), Error> {
         conn.execute(
             "INSERT INTO tasks (end_time, description, project_name, running, start_time, unique_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
              ON CONFLICT(start_time) DO UPDATE SET
@@ -35,7 +35,7 @@ impl TaskDto {
     }
 }
 
-pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
+pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, Error> {
     let stmt = "SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
     let task: TaskDto = conn.query_row(stmt, [], |r| {
         Ok(TaskDto {
@@ -51,7 +51,7 @@ pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, TError> {
     Ok(task)
 }
 
-pub fn get_tasks_start_with(conn: &Connection, id: &str) -> Result<Vec<TaskDto>, TError> {
+pub fn get_tasks_start_with(conn: &Connection, id: &str) -> Result<Vec<TaskDto>, Error> {
     let mut stmt = conn.prepare(&("SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE tasks.unique_id LIKE '%".to_owned() + id +"%'"))?;
     let mut rows = stmt.query([])?;
 
@@ -70,7 +70,7 @@ pub fn get_tasks_start_with(conn: &Connection, id: &str) -> Result<Vec<TaskDto>,
     Ok(tasks)
 }
 
-pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, TError> {
+pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, Error> {
     let mut stmt = conn.prepare("SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE tasks.end_time >= DATETIME('now', '-24 hour')")?;
     let mut rows = stmt.query([])?;
 

@@ -8,15 +8,14 @@ extern crate rusqlite;
 extern crate uuid;
 mod data;
 mod display;
-mod terror;
 mod time;
 
+use anyhow::{anyhow};
 use clap::clap_app;
 use data::*;
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 use std::{fs, io};
-use terror::*;
 use time::{convert_to_utc_timestr, get_current_utc_string};
 use uuid::Uuid;
 
@@ -28,12 +27,15 @@ fn parse_args() -> clap::ArgMatches {
      (@arg PROJECT: -p --project +takes_value "")
      (@arg START_TIME: -t --time +takes_value "")
      (@arg DESC: "Sets the description of a task to execute")
+     (@subcommand delete =>
+        (about: "deletes a task that has the specified id")
+        (@arg TASK_ID: +required "Sets the id of the task that is to be completed"))
      (@subcommand end =>
          (about: "ends currently executing task")
          (@arg END_TIME: -t --time +takes_value ""))
      (@subcommand find =>
         (about: "finds a previously executed task by id")
-        (@arg ID: -i --id +takes_value ""))
+        (@arg TASK_ID: +required "Sets the id of the task that is to be found"))
      (@subcommand info =>
          (about: "returns info on the currently executing task or nothing at all"))
      (@subcommand list =>
@@ -44,7 +46,7 @@ fn parse_args() -> clap::ArgMatches {
     matches
 }
 
-fn run(args: clap::ArgMatches) -> TResult<()> {
+fn run(args: clap::ArgMatches) -> Result<(), anyhow::Error> {
     let mut path: PathBuf = match dirs::home_dir() {
         Some(path) => path,
         None => PathBuf::from(""),
@@ -78,6 +80,23 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
     };
 
     match args.subcommand() {
+        Some(("delete", delete)) => {
+            let task_id = delete.value_of("TASK_ID")
+                .ok_or(anyhow!("A task id was not entered for the delete command.  Enter a valid task id and try again."))?;
+
+            let task_to_delete = get_tasks_start_with(&conn, task_id)?;
+
+            if task_to_delete.is_empty() {
+                display::custom_message(
+                    "there were no tasks found with your id. Check your id and try again.",
+                    &mut io::stdout(),
+                )?;
+                return Ok(());
+            }
+
+            
+                
+        }
         Some(("end", end)) => {
             let end_time: String = match end.value_of("END_TIME") {
                 Some(end_time) => convert_to_utc_timestr(end_time)?,
@@ -99,8 +118,8 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
             };
         }
         Some(("find", search_id)) => {
-            let id = search_id.value_of("ID")
-                .ok_or(TError::new(ErrorKind::Io, "A search id was not entered for the find command.  Enter a valid search id and try again."))?;
+            let id = search_id.value_of("TASK_ID")
+                .ok_or(anyhow!("A search id was not entered for the find command.  Enter a valid search id and try again."))?;
 
             match get_tasks_start_with(&conn, id) {
                 Ok(tasks) => { 
@@ -199,6 +218,6 @@ fn run(args: clap::ArgMatches) -> TResult<()> {
 
 fn main() -> Result<()> {
     let args = parse_args();
-    run(args).map_err(|e| e.exit()).unwrap();
+    run(args).map_err(|e| format!("error code: {}", e)).unwrap();
     std::process::exit(0);
 }
