@@ -113,22 +113,26 @@ mod tests {
 
     #[test]
     fn test_convert_local_to_utc() {
-        let timest = "15:44:56";
-        let utc_time = "05:44:56";
+        let timest = Local::now().format("%H:%M:%S").to_string();
+        let utc_time = chrono::offset::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
         assert_eq!(
-            convert_to_utc_timestr(&timest).unwrap().contains(utc_time),
+            convert_to_utc_timestr(&timest).unwrap().contains(&utc_time),
             true
         );
     }
 
     #[test]
     fn test_convert_local_to_utc_no_seconds() {
-        let timest = "15:44";
-        let utc_time_with_padd = "05:44:00";
+        let timest = Local::now().format("%H:%M").to_string();
+        let mut utc_time_with_padd = chrono::offset::Utc::now().format("%H:%M").to_string();
+
+        utc_time_with_padd.push_str(":00");
+
         assert_eq!(
             convert_to_utc_timestr(&timest)
                 .unwrap()
-                .contains(utc_time_with_padd),
+                .contains(&utc_time_with_padd),
             true
         );
     }
@@ -146,15 +150,20 @@ mod tests {
     }
 
     #[test]
-    fn test_display_local_timestamp() {
-        let timest = FixedOffset::east(0)
-            .ymd(1983, 4, 13)
-            .and_hms_milli(12, 9, 14, 274)
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string();
+    fn test_display_local_timestamp_with_date() {
+        let c_time = chrono::offset::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
         assert_eq!(
-            convert_to_local_timestamp(&timest, false).unwrap(),
-            "22:09:14"
+            convert_to_local_timestamp(&c_time, true).unwrap(),
+            Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+        );
+    }
+
+    #[test]
+    fn test_display_local_timestamp_without_date() {
+        let c_time = chrono::offset::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        assert_eq!(
+            convert_to_local_timestamp(&c_time, false).unwrap(),
+            Local::now().format("%H:%M:%S").to_string(),
         );
     }
 
