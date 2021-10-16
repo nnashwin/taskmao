@@ -143,7 +143,7 @@ fn run(args: clap::ArgMatches) -> Result<(), anyhow::Error> {
         },
         Some(("list", _)) => match get_todays_tasks(&conn) {
             Ok(tasks) => {
-                display::task_list(tasks)?;
+                display::task_list(tasks, &mut io::stdout())?;
             }
             Err(_err) => {
                 display::custom_message("you have no tasks from today", &mut io::stdout())?;

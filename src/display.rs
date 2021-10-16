@@ -69,22 +69,6 @@ pub fn task_find(tasks: Vec<TaskDto>, task_id: &str, mut writer: impl std::io::W
         for task in &tasks {
             let start_time = convert_to_local_timestamp(&task.start_time, true)?;
             let end_time = convert_to_local_timestamp(&task.end_time, true)?;
-            let duration = get_time_between_stamps(&start_time, &end_time)?;
-            let seconds = if duration.num_seconds() < 60 {
-                duration.num_seconds()
-            } else {
-                duration.num_seconds() % 60
-            };
-            let minutes = if duration.num_minutes() < 60 {
-                duration.num_minutes()
-            } else {
-                duration.num_minutes() % 60
-            };
-            let hours = if duration.num_hours() < 24 {
-                duration.num_hours()
-            } else {
-                duration.num_hours() % 24
-            };
 
             if task.running == "true" {
                 writeln!(
@@ -96,13 +80,7 @@ pub fn task_find(tasks: Vec<TaskDto>, task_id: &str, mut writer: impl std::io::W
                     task.unique_id
                 )?;
             } else {
-                let dur_str = format!(
-                    "{} days, {} hours, {} minutes and {} seconds",
-                    duration.num_days(),
-                    hours,
-                    minutes,
-                    seconds
-                );
+                let duration = get_time_between_stamps(&start_time, &end_time)?;
 
                 writeln!(
                     writer,
@@ -111,7 +89,7 @@ pub fn task_find(tasks: Vec<TaskDto>, task_id: &str, mut writer: impl std::io::W
                     task.project_name,
                     start_time,
                     end_time,
-                    dur_str,
+                    create_duration_str(duration),
                     task.unique_id
                 )?;
             }
@@ -135,7 +113,7 @@ pub fn task_info(task: TaskDto, mut writer: impl std::io::Write) -> Result<(), a
     Ok(())
 }
 
-pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), anyhow::Error> {
+pub fn task_list(tasks: Vec<TaskDto>, mut writer: impl std::io::Write) -> Result<(), anyhow::Error> {
     let task_str = if tasks.len() == 1 { "task" } else { "tasks" };
 
     println!(
@@ -148,36 +126,27 @@ pub fn task_list(tasks: Vec<TaskDto>) -> Result<(), anyhow::Error> {
         let start_time = convert_to_local_timestamp(&task.start_time, true)?;
         let end_time = convert_to_local_timestamp(&task.end_time, true)?;
         let duration = get_time_between_stamps(&start_time, &end_time)?;
-        let seconds = if duration.num_seconds() < 60 {
-            duration.num_seconds()
-        } else {
-            duration.num_seconds() % 60
-        };
-        let minutes = if duration.num_minutes() < 60 {
-            duration.num_minutes()
-        } else {
-            duration.num_minutes() % 60
-        };
-        let hours = if duration.num_hours() < 24 {
-            duration.num_hours()
-        } else {
-            duration.num_hours() % 24
-        };
 
         if task.running == "true" {
-            println!(
-                "Current Task: {}\n    Project: {}\n    Start Time: {}\n    Task Id: {}\n---\n",
-                task.description, task.project_name, start_time, task.unique_id
-            );
+            writeln!(
+                writer,
+                "Current Task: {}\n    Project: {}\n    Start Time: {}\n    Task Id: {}\n",
+                task.description,
+                task.project_name,
+                start_time,
+                task.unique_id
+            )?;
         } else {
-            let dur_str = format!(
-                "{} days, {} hours, {} minutes and {} seconds",
-                duration.num_days(),
-                hours,
-                minutes,
-                seconds
-            );
-            println!("    Task: {}\n    Project: {}\n    Start Time: {}\n    End Time: {}\n    Duration: {}\n    Task Id: {}\n---\n", task.description, task.project_name, start_time, end_time, dur_str, task.unique_id);
+            writeln!(
+                writer,
+                "    Task: {}\n    Project: {}\n    Start Time: {}\n    End Time: {}\n    Duration: {}\n    Task Id: {}\n---\n",
+                task.description,
+                task.project_name,
+                start_time,
+                end_time,
+                create_duration_str(duration),
+                task.unique_id
+            )?;
         }
     }
 
