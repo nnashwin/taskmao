@@ -11,7 +11,7 @@ mod display;
 mod time;
 
 use anyhow::{anyhow};
-use clap::clap_app;
+use clap::{clap_app, crate_version, ArgMatches};
 use data::*;
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
@@ -19,9 +19,9 @@ use std::{fs, io};
 use time::{convert_to_utc_timestr, get_current_utc_string};
 use uuid::Uuid;
 
-fn parse_args() -> clap::ArgMatches {
+fn parse_args() -> ArgMatches {
     let matches = clap_app!(taskmao =>
-     (version: "0.1.0")
+     (version: crate_version!())
      (author: "Tyler B. <tyler@tylerboright.com>")
      (about: "Gain power through noticing.  Notice how you spend your time.")
      (@arg PROJECT: -p --project +takes_value "")
@@ -46,7 +46,7 @@ fn parse_args() -> clap::ArgMatches {
     matches
 }
 
-fn run(args: clap::ArgMatches) -> Result<(), anyhow::Error> {
+fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
     let mut path: PathBuf = match dirs::home_dir() {
         Some(path) => path,
         None => PathBuf::from(""),
