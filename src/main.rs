@@ -37,7 +37,7 @@ fn parse_args() -> ArgMatches {
         (about: "finds a previously executed task by id")
         (@arg TASK_ID: +required "Sets the id of the task that is to be found"))
      (@subcommand info =>
-         (about: "returns info on the currently executing task or nothing at all"))
+         (about: "returns info on the currently executing task or nothing"))
      (@subcommand list =>
          (about: "lists tasks completed / worked on today")
     ))
