@@ -624,7 +624,7 @@ dependencies = [
 
 [[package]]
 name = "taskmao"
-version = "0.1.1"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "chrono",
