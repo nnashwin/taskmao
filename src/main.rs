@@ -11,7 +11,7 @@ mod display;
 mod time;
 
 use anyhow::{anyhow};
-use clap::{clap_app, crate_version, ArgMatches};
+use clap::{clap_app, ArgMatches};
 use data::*;
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
@@ -21,7 +21,7 @@ use uuid::Uuid;
 
 fn parse_args() -> ArgMatches {
     let matches = clap_app!(taskmao =>
-     (version: crate_version!())
+     (version: "0.2.1")
      (author: "Tyler B. <tyler@tylerboright.com>")
      (about: "Gain power through noticing.  Notice how you spend your time.")
      (@arg PROJECT: -p --project +takes_value "")
@@ -94,8 +94,8 @@ fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
                 return Ok(());
             }
 
-            
-                
+
+
         }
         Some(("end", end)) => {
             let end_time: String = match end.value_of("END_TIME") {
@@ -122,10 +122,10 @@ fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
                 .ok_or(anyhow!("A search id was not entered for the find command.  Enter a valid search id and try again."))?;
 
             match get_tasks_start_with(&conn, id) {
-                Ok(tasks) => { 
+                Ok(tasks) => {
                     display::task_find(tasks, id, &mut io::stdout())?;
                 },
-                Err(_err) => { 
+                Err(_err) => {
                     display::custom_message(&(format!("no tasks were found for the id: {}", id)), &mut io::stdout())?;
                 }
             };
