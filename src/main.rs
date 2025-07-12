@@ -21,7 +21,7 @@ use uuid::Uuid;
 
 fn parse_args() -> ArgMatches {
     let matches = clap_app!(taskmao =>
-     (version: "0.2.1")
+     (version: "0.2.2")
      (author: "Tyler B. <tyler@tylerboright.com>")
      (about: "Gain power through noticing.  Notice how you spend your time.")
      (@arg PROJECT: -p --project +takes_value "")
