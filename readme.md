@@ -6,7 +6,7 @@
 cargo install taskmao
 ```
 
-## Usage 
+## Usage
 ```
 $ taskmao --help
     USAGE:                                                                      taskmao [OPTIONS] [DESC] [SUBCOMMAND]
@@ -27,9 +27,9 @@ $ taskmao --help
         end       ends currently executing task
         find      finds a previously executed task by id
         help      Print this message or the help of the given subcommand(s)
-        info      returns info on the currently executing task or nothing 
+        info      returns info on the currently executing task or nothing
         list      lists tasks completed / worked on today
 ```
 
 ## Maintainers
-- [Tyler Boright](https://tylerboright.com)
+- [Norman Nashwin]
