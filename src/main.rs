@@ -84,18 +84,42 @@ fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
             let task_id = delete.value_of("TASK_ID")
                 .ok_or(anyhow!("A task id was not entered for the delete command.  Enter a valid task id and try again."))?;
 
-            let task_to_delete = get_tasks_start_with(&conn, task_id)?;
+            let task_to_delete = match find_task_by_id(&conn, task_id) {
+                Ok(task) => task,
+                Err(error) if error.to_string().contains("returned no rows") => {
+                    display::custom_message(
+                        "there were no tasks found with your id. check your id and try again",
+                        &mut io::stdout(),
+                    )?;
+                    return Ok(());
+                },
+                Err(error) => {
+                    display::custom_message(&(format!("encountered the following sqlite error while trying to delete your task: {}", error.to_string())), &mut io::stdout())?;
+                    return Ok(());
+                }
+            };
 
-            if task_to_delete.is_empty() {
+            // handle early return when the task to delete is already running
+            if task_to_delete.running == "true" {
                 display::custom_message(
-                    "there were no tasks found with your id. Check your id and try again.",
-                    &mut io::stdout(),
-                )?;
+                        "this task is currently running.  if you want to delete, end the task and try again",
+                        &mut io::stdout(),
+                    )?;
+
                 return Ok(());
             }
 
+            match delete_task_by_id(&conn, &task_to_delete.unique_id) {
+                Ok(()) => {
+                    display::custom_message(&(format!("deleted task with id '{}'", task_id)), &mut io::stdout())?;
 
-
+                    return Ok(());
+                },
+                Err(error) => {
+                    display::custom_message(&(format!("encountered the following sqlite error while trying to delete your task: {}", error.to_string())), &mut io::stdout())?;
+                    return Ok(());
+                }
+            }
         }
         Some(("end", end)) => {
             let end_time: String = match end.value_of("END_TIME") {

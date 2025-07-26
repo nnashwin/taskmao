@@ -35,6 +35,28 @@ impl TaskDto {
     }
 }
 
+pub fn delete_task_by_id(conn: &Connection, task_unique_id: &str) -> Result<(), Error> {
+    conn.execute("DELETE from tasks where unique_id = ?1;", params![task_unique_id])?;
+
+    Ok(())
+}
+
+pub fn find_task_by_id(conn: &Connection, task_unique_id: &str) -> Result<TaskDto, Error> {
+    let stmt = "SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE unique_id = ?1";
+    let task: TaskDto = conn.query_row(stmt, [task_unique_id], |r| {
+        Ok(TaskDto {
+            description: r.get(0)?,
+            project_name: r.get(1)?,
+            running: r.get(2)?,
+            end_time: r.get(3)?,
+            start_time: r.get(4)?,
+            unique_id: r.get(5)?,
+        })
+    })?;
+
+    Ok(task)
+}
+
 pub fn get_most_recent_task(conn: &Connection) -> Result<TaskDto, Error> {
     let stmt = "SELECT description, project_name, running, end_time, start_time, unique_id FROM tasks WHERE id = (SELECT MAX(id) FROM tasks) and running = 'true'";
     let task: TaskDto = conn.query_row(stmt, [], |r| {
@@ -89,6 +111,8 @@ pub fn get_todays_tasks(conn: &Connection) -> Result<Vec<TaskDto>, Error> {
 
     Ok(tasks)
 }
+
+
 
 pub fn set_up_sqlite(conn: &Connection) -> Result<()> {
     let create_sql = r"
