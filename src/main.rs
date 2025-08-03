@@ -19,6 +19,7 @@ use std::{fs, io};
 use time::{convert_to_utc_timestr, get_current_utc_string};
 use uuid::Uuid;
 
+const CANCEL_TEXT: &str = "cancel";
 const DELETE_TEXT: &str = "delete";
 const DESCRIPTION_TEXT: &str = "DESC";
 const END_TEXT: &str = "end";
@@ -54,6 +55,10 @@ fn parse_args() -> ArgMatches {
                 .action(ArgAction::Set)
         )
         .subcommand(
+            Command::new(CANCEL_TEXT)
+                .about("cancels the currently running task")
+        )
+        .subcommand(
             Command::new(DELETE_TEXT)
                 .about("deletes a task by its unique id")
                 .arg(arg!(<TASK_ID> "sets the id of the task that is to be deleted"))
@@ -61,7 +66,7 @@ fn parse_args() -> ArgMatches {
         )
         .subcommand(
             Command::new(END_TEXT)
-                .about("ends currently executing task")
+                .about("ends currently running task")
                 .arg(
                     Arg::new("END_TIME")
                     .short('t')
@@ -77,7 +82,7 @@ fn parse_args() -> ArgMatches {
         )
         .subcommand(
             Command::new(INFO_TEXT)
-                .about("returns info on the currently executing task or nothing")
+                .about("returns info on the currently running task")
         )
         .subcommand(
             Command::new(LIST_TEXT)
@@ -122,6 +127,26 @@ fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
     };
 
     match args.subcommand() {
+        Some((CANCEL_TEXT, _)) => match get_most_recent_task(&conn) {
+            Ok(current_task) => {
+                match delete_task_by_id(&conn, &current_task.unique_id) {
+                    Ok(()) => {
+                        display::custom_message("cancelled current task.  it will not persist within the task data store", &mut io::stdout())?;
+                        return Ok(());
+                    },
+                    Err(error) => {
+                        display::custom_message(&(format!("your task was not able to be cancelled with the following error message: {}", error.to_string())), &mut io::stdout())?;
+                        return Ok(());
+                    }
+                }
+            }
+            Err(_err) => {
+                display::custom_message(
+                    "you currently have no task running",
+                    &mut io::stdout(),
+                )?;
+            }
+        }
         Some((DELETE_TEXT, sub_matches)) => {
             let task_id = sub_matches.get_one::<String>("TASK_ID")
                 .ok_or(anyhow!("A task id was not entered for the delete command.  Enter a valid task id and try again."))?;
