@@ -132,7 +132,6 @@ fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
                 match delete_task_by_id(&conn, &current_task.unique_id) {
                     Ok(()) => {
                         display::custom_message("cancelled current task.  it will not persist within the task data store", &mut io::stdout())?;
-
                         return Ok(());
                     },
                     Err(error) => {
@@ -147,7 +146,6 @@ fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
                     &mut io::stdout(),
                 )?;
             }
-
         }
         Some((DELETE_TEXT, sub_matches)) => {
             let task_id = sub_matches.get_one::<String>("TASK_ID")
