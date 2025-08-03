@@ -19,10 +19,11 @@ $ taskmao --help
     Usage: taskmao [OPTIONS] [DESC] [COMMAND]
 
     Commands:
+      cancel  cancels the currently running task
       delete  deletes a task by its unique id
-      end     ends currently executing task
+      end     ends currently running task
       find    finds a previously executed task by id
-      info    returns info on the currently executing task or nothing
+      info    returns info on the currently running task
       list    lists tasks completed / worked on today
       help    Print this message or the help of the given subcommand(s)
 
