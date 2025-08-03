@@ -1,0 +1,5 @@
+* Next Steps
+** TODO Add a `discard` command to discard the currently running task
+** TODO Add the ability to see your daily activity by project in the `list` command
+** TODO Add the ability to see your activity over a certain period of time; include the ability to list by project
+** TODO Add icon to the readme

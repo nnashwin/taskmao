@@ -1,4 +1,7 @@
 # taskmao
+
+![TaskMao Logo](assets/taskmao_logo.png)
+
 > Gain power through noticing.  Notice how you spend your time.
 
 ## Install
