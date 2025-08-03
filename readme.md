@@ -1,6 +1,8 @@
 # taskmao
 
-![TaskMao Logo](assets/taskmao_logo.png)
+<p align="center">
+  <img src="assets/taskmao_logo.png" alt="TaskMao Logo" width="200"/>
+</p>
 
 > Gain power through noticing.  Notice how you spend your time.
 
