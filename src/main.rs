@@ -28,7 +28,7 @@ const LIST_TEXT: &str = "list";
 const START_TIME_TEXT: &str = "START_TIME";
 const PROJECT_TEXT: &str = "project";
 
-fn cli() -> ArgMatches {
+fn parse_args() -> ArgMatches {
     let cli = Command::new("taskmao")
         .about("Gain power through noticing.  Notice how you spend your time.")
         .arg_required_else_help(true)
@@ -286,7 +286,7 @@ fn run(args: ArgMatches) -> Result<(), anyhow::Error> {
 }
 
 fn main() -> Result<()> {
-    let args = cli();
+    let args = parse_args();
     run(args).map_err(|e| format!("error code: {}", e)).unwrap();
     std::process::exit(0);
 }
